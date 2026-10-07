@@ -4,7 +4,10 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mola-auditor.vercel.app"),
+  metadataBase: new URL("https://mola.antideploy.app"),
+  alternates: {
+    canonical: "https://mola.antideploy.app",
+  },
   title: "Mola — Evidence-Based Web Auditor for Developers",
   description:
     "Minimal, open-source web auditing tool for developers. Enter a website URL to discover concrete evidence-based findings across Security, Performance, SEO, and Accessibility.",
@@ -20,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Mola — Evidence-Based Web Auditor",
     description: "Audit your website. Fix what actually matters with concrete developer evidence.",
-    url: "https://github.com/mizan989/Mola-Web_Auditor",
+    url: "https://mola.antideploy.app",
     siteName: "Mola",
     images: [{ url: "/logo.png", width: 512, height: 512, alt: "Mola Logo" }],
     type: "website",

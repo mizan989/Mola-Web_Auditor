@@ -1,4 +1,4 @@
-import { Finding, PassedCheck, PerformanceMetrics } from "@/types/audit";
+import type { Finding, PassedCheck, PerformanceMetrics } from "../../types/audit.ts";
 
 export interface PerformanceAuditResult {
   metrics: PerformanceMetrics;
@@ -129,7 +129,7 @@ export function auditPerformance(
   if (headMatch) {
     const headContent = headMatch[1];
     const blockingScripts =
-      headContent.match(/<script\b(?![^>]*(?:async|defer|type=["']module["']))[^>]*src=[^>]*>/gi) || [];
+      headContent.match(/<script\b(?![^>]*(?:async|defer|nomodule|type=["']module["']))[^>]*src=[^>]*>/gi) || [];
 
     if (blockingScripts.length > 0) {
       findings.push({
@@ -147,6 +147,13 @@ export function auditPerformance(
         codeSnippet: '<script src="..." defer></script>',
         instancesCount: blockingScripts.length,
         instances: blockingScripts.slice(0, 4),
+      });
+    } else {
+      passedChecks.push({
+        id: "perf-scripts-deferred",
+        category: "performance",
+        title: "All Scripts Asynchronous or Deferred",
+        detail: "No synchronous render-blocking scripts detected in document <head>.",
       });
     }
   }

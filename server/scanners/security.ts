@@ -1,4 +1,4 @@
-import { Finding, PassedCheck } from "@/types/audit";
+import type { Finding, PassedCheck } from "../../types/audit.ts";
 
 export interface SecurityAuditResult {
   findings: Finding[];
@@ -71,29 +71,45 @@ export function auditSecurity(
       codeSnippet:
         "Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self';",
     });
-  } else if (csp.includes("'unsafe-inline'") || csp.includes("'unsafe-eval'")) {
-    findings.push({
-      id: "sec-csp-unsafe",
-      category: "security",
-      severity: "medium",
-      priority: "fix-first",
-      title: "Overly Permissive CSP Directives Detected",
-      description: "The Content-Security-Policy header contains 'unsafe-inline' or 'unsafe-eval'.",
-      whyItMatters:
-        "Unsafe inline execution weakens protection against Cross-Site Scripting by permitting inline injected script execution.",
-      evidence: `content-security-policy: ${csp.slice(0, 140)}...`,
-      affectedTarget: 'response.headers["content-security-policy"]',
-      recommendation:
-        "Migrate inline scripts to external bundles or implement cryptographically random nonces (nonce-*) / SHA hashes.",
-      codeSnippet: "script-src 'self' 'nonce-rAnd0m123'",
-    });
   } else {
-    passedChecks.push({
-      id: "sec-csp-present",
-      category: "security",
-      title: "Content-Security-Policy Configured",
-      detail: "CSP header is configured with restricted origin controls.",
-    });
+    // Specifically inspect script execution directives (script-src or fallback default-src)
+    const scriptSrcMatch = csp.match(/(?:^|;)\s*script-src\s+([^;]+)/i);
+    const defaultSrcMatch = csp.match(/(?:^|;)\s*default-src\s+([^;]+)/i);
+    const scriptDirective = (scriptSrcMatch ? scriptSrcMatch[1] : (defaultSrcMatch ? defaultSrcMatch[1] : "")).trim();
+
+    const hasUnsafeEval = scriptDirective.includes("'unsafe-eval'");
+    const hasUnsafeInlineScript =
+      scriptDirective.includes("'unsafe-inline'") &&
+      !scriptDirective.includes("'nonce-") &&
+      !scriptDirective.includes("'strict-dynamic'") &&
+      !/'sha(?:256|384|512)-/i.test(scriptDirective);
+
+    if (hasUnsafeEval || hasUnsafeInlineScript) {
+      findings.push({
+        id: "sec-csp-unsafe",
+        category: "security",
+        severity: "medium",
+        priority: "fix-first",
+        title: "Overly Permissive CSP Directives Detected",
+        description: hasUnsafeEval
+          ? "The Content-Security-Policy header permits 'unsafe-eval', allowing dynamic code evaluation."
+          : "The Content-Security-Policy header permits un-nonced 'unsafe-inline' scripts, weakening XSS mitigation.",
+        whyItMatters:
+          "Unsafe script execution weakens protection against Cross-Site Scripting by permitting dynamic evaluation or injected script execution.",
+        evidence: `content-security-policy: ${csp.slice(0, 140)}...`,
+        affectedTarget: 'response.headers["content-security-policy"]',
+        recommendation:
+          "Migrate inline scripts to external bundles or implement cryptographically random nonces (nonce-*) / SHA hashes.",
+        codeSnippet: "script-src 'self' 'nonce-rAnd0m123'",
+      });
+    } else {
+      passedChecks.push({
+        id: "sec-csp-present",
+        category: "security",
+        title: "Content-Security-Policy Configured",
+        detail: "CSP header is configured with restricted origin controls.",
+      });
+    }
   }
 
   // 2. Strict-Transport-Security (HSTS)

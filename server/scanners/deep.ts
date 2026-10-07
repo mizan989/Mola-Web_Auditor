@@ -1,4 +1,4 @@
-import { Finding, PassedCheck } from "@/types/audit";
+import type { Finding, PassedCheck } from "../../types/audit.ts";
 
 export interface DeepScanResult {
   findings: Finding[];

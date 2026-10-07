@@ -1,4 +1,4 @@
-import { Finding, PassedCheck, SeoInspection } from "@/types/audit";
+import type { Finding, PassedCheck, SeoInspection } from "../../types/audit.ts";
 
 export interface SeoAuditResult {
   seoData: SeoInspection;
@@ -125,7 +125,9 @@ export function auditSeo(htmlText: string): SeoAuditResult {
   }
 
   // 3. Canonical URL
-  const canonicalMatch = htmlText.match(/<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["']([^"']*)["']/i);
+  const canonicalMatch =
+    htmlText.match(/<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["']([^"']*)["']/i) ||
+    htmlText.match(/<link\b[^>]*\bhref=["']([^"']*)["'][^>]*\brel=["']canonical["']/i);
   const canonicalUrl = canonicalMatch ? canonicalMatch[1].trim() : null;
 
   if (!canonicalUrl) {
