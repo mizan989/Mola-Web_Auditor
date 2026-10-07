@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/mizan989/Mola-Web_Auditor">
+  <a href="https://mola.antideploy.app">
     <img src="./assets/logo.png" alt="Mola Logo" width="100" height="100">
   </a>
 </p>
@@ -12,12 +12,12 @@
 
 <br/>
 
+<a href="https://mola.antideploy.app"><img src="https://img.shields.io/badge/Live%20App-mola.antideploy.app-06141B?style=for-the-badge&logoColor=white" alt="Live App"></a>
 <a href="#-quick-start"><img src="https://img.shields.io/badge/Docs-Quickstart-06141B?style=for-the-badge&logo=gitbook&logoColor=white" alt="Docs"></a>
-<a href="https://github.com/mizan989/Mola-Web_Auditor"><img src="https://img.shields.io/badge/Website-Mola-CCD0CF?style=for-the-badge&logoColor=253745" alt="Website"></a>
 <a href="https://github.com/mizan989/Mola-Web_Auditor/discussions"><img src="https://img.shields.io/badge/Community-Discussions-06141B?style=for-the-badge&logo=github&logoColor=white" alt="Discussions"></a>
 
 <a href="#-ways-to-run-mola"><img src="https://img.shields.io/badge/Mola%20App-Next.js%2016%20%2B%20TypeScript-06141B?style=for-the-badge&logoColor=white" alt="Mola App"></a>
-<a href="#-flagship-audit-workflow"><img src="https://img.shields.io/badge/Try%20Live%20Demo-253745?style=for-the-badge&logoColor=white" alt="Try Live Demo"></a>
+<a href="https://mola.antideploy.app"><img src="https://img.shields.io/badge/Try%20Live%20Demo-253745?style=for-the-badge&logoColor=white" alt="Try Live Demo"></a>
 
 <a href="https://github.com/mizan989/Mola-Web_Auditor/stargazers"><img src="https://img.shields.io/github/stars/mizan989/Mola-Web_Auditor?style=flat-square" alt="GitHub Stars"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-06141B?style=flat-square" alt="License"></a>
@@ -191,6 +191,14 @@ npm run build
 npm run start
 ```
 
+### ☁️ Cloud Deployment (Antideploy)
+
+Mola is deployed on **Antideploy** with continuous deployment on every push to `main`:
+
+- **Production URL**: [https://mola.antideploy.app](https://mola.antideploy.app)
+- **Deployment Spec**: [`.antideploy.json`](.antideploy.json) links to the Antideploy application (`mola.antideploy.app`).
+- **Stateless & Containerized**: Zero database dependencies, fully SSRF-hardened, and optimized Next.js 16 container runtime.
+
 ---
 
 ## 🛠️ Verification & AI Issue Artifact Workflow
@@ -266,6 +274,7 @@ Auditing arbitrary URLs poses severe Server-Side Request Forgery (SSRF) risks. M
 
 ```text
 d:/PROJECTS/Mola/
+├── .antideploy.json             # Antideploy configuration (mola.antideploy.app)
 ├── app/
 │   ├── api/
 │   │   └── scan/
@@ -281,6 +290,7 @@ d:/PROJECTS/Mola/
 │   ├── logo.png                  # High-resolution brand mark (512x512)
 │   └── screenshot.png            # UI preview screenshot
 ├── lib/
+│   ├── compare.ts                # Client/server-isolated audit comparison engine
 │   ├── exportJson.ts             # JSON export & file download helpers
 │   └── exportMarkdown.ts         # issues.md Markdown generator
 ├── public/
@@ -336,5 +346,9 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 **Md Mizan**
 
-- GitHub: [@mizan989](https://github.com/mizan989)
-- Repository: [Mola-Web_Auditor](https://github.com/mizan989/Mola-Web_Auditor)
+- **GitHub**: [@mizan989](https://github.com/mizan989)
+- **LinkedIn**: [in/mizan989](https://www.linkedin.com/in/mizan989)
+- **Instagram**: [@mizan989](https://instagram.com/mizan989)
+- **X (Twitter)**: [@mizan989](https://x.com/mizan989)
+- **Repository**: [Mola-Web_Auditor](https://github.com/mizan989/Mola-Web_Auditor)
+- **Live Site**: [mola.antideploy.app](https://mola.antideploy.app)
