@@ -32,7 +32,7 @@ import {
 } from "@/types/audit";
 import { generateIssuesMarkdown, generateVerificationMarkdown } from "@/lib/exportMarkdown";
 import { downloadJsonFile, downloadMarkdownFile } from "@/lib/exportJson";
-import { compareAuditResults } from "@/server/orchestrator";
+import { compareAuditResults } from "@/lib/compare";
 
 const PRESET_URLS = [
   "https://example.com",

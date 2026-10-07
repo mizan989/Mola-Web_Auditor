@@ -19,12 +19,16 @@ yarn-error.log*
 .env*.local
 .env
 
-# OS
+# OS & IDE
 .DS_Store
 Thumbs.db
+.vscode/
+.cursor/
+*.tsbuildinfo
 
 # Agent configurations
 .agents/
+skills-lock.json
 
 # Markdown documentation (ignore all markdown files except README.md)
 *.md
