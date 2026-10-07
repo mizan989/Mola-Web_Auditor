@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,11 +37,13 @@ export const viewport: Viewport = {
   themeColor: "#CCD0CF",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Reading headers dynamically invokes per-request rendering and allows Next.js to apply the middleware CSP nonce to internal script tags
+  await headers();
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-primary)]">
