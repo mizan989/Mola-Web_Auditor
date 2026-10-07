@@ -30,6 +30,8 @@ Thumbs.db
 .agents/
 skills-lock.json
 
-# Markdown documentation (ignore all markdown files except README.md)
+# Markdown files (all ignored except README.md)
 *.md
+**/*.md
 !README.md
+!readme.md

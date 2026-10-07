@@ -1,9 +1,9 @@
-import { ScanResult, VerificationComparison } from "@/types/audit";
+import type { ScanResult, VerificationComparison } from "../types/audit.ts";
 
 /**
  * Generates an actionable `issues.md` document from audit findings,
  * formatted specifically for AI agents (Gemini, Claude, Cursor) and developer issue tracking.
- * Complies with PRD.md F-008.
+ * Complies with PRD.md F-008 and issues.md.
  */
 export function generateIssuesMarkdown(result: ScanResult): string {
   const {
@@ -12,6 +12,7 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     hostname,
     scanTimestamp,
     scanMode,
+    completeness,
     summary,
     findings,
     passedChecks,
@@ -28,31 +29,42 @@ export function generateIssuesMarkdown(result: ScanResult): string {
   md += `> **Audit Metadata**\n`;
   md += `> - Target: \`${targetUrl}\`\n`;
   if (finalUrl !== targetUrl) {
-    md += `> - Final Redirect: \`${finalUrl}\`\n`;
+    md += `> - Final Destination: \`${finalUrl}\`\n`;
   }
   md += `> - Scanned: ${dateStr}\n`;
-  md += `> - Mode: ${scanMode.toUpperCase()} Scan\n`;
+  md += `> - Mode: ${scanMode.toUpperCase()} Scan (${completeness === "full" ? "Complete" : "Partial"})\n`;
   md += `> - Total Findings: **${summary.totalFindings}** (High: ${summary.highCount}, Medium: ${summary.mediumCount}, Low: ${summary.lowCount})\n`;
   md += `> - Passed Checks: **${summary.passedCount}**\n\n`;
 
   // Technologies
   if (technologies.length > 0) {
     md += `## Detected Technology Stack\n\n`;
-    md += `| Category | Technology | Confidence |\n`;
-    md += `|---|---|---|\n`;
+    md += `| Category | Technology | Confidence | Evidence |\n`;
+    md += `|---|---|---|---|\n`;
     for (const tech of technologies) {
-      md += `| ${tech.category} | ${tech.name}${tech.version ? ` (${tech.version})` : ""} | ${tech.confidence}% |\n`;
+      md += `| ${tech.category} | ${tech.name}${tech.version ? ` (${tech.version})` : ""} | ${tech.confidence}% | ${tech.evidence || "Signature matched"} |\n`;
     }
     md += `\n`;
   }
 
   // HTTP Telemetry
-  md += `## HTTP & Infrastructure Details\n\n`;
-  md += `- **Status**: \`${httpInfo.statusCode} ${httpInfo.statusText}\`\n`;
-  md += `- **Protocol**: \`${httpInfo.protocol}\`\n`;
-  md += `- **Latency (TTFB)**: \`${httpInfo.responseTimeMs} ms\`\n`;
-  md += `- **Payload Size**: \`${Math.round((httpInfo.contentLength / 1024) * 10) / 10} KB\`\n`;
-  md += `- **HTTPS Secured**: \`${httpInfo.isHttps ? "Yes" : "No"}\`\n\n`;
+  if (httpInfo) {
+    md += `## HTTP & Infrastructure Details\n\n`;
+    if (httpInfo.statusCode !== undefined) md += `- **Status**: \`${httpInfo.statusCode} ${httpInfo.statusText || ""}\`\n`;
+    if (httpInfo.protocol) md += `- **Protocol**: \`${httpInfo.protocol}\`\n`;
+    if (httpInfo.responseTimeMs !== undefined) md += `- **Latency (TTFB)**: \`${httpInfo.responseTimeMs} ms\`\n`;
+    if (httpInfo.contentLength !== undefined) {
+      md += `- **Payload Size**: \`${Math.round((httpInfo.contentLength / 1024) * 10) / 10} KB\`${httpInfo.isTruncated ? " *(Payload truncated at inspection limit)*" : ""}\n`;
+    }
+    if (httpInfo.isHttps !== undefined) md += `- **HTTPS Secured**: \`${httpInfo.isHttps ? "Yes" : "No"}\`\n`;
+    if (httpInfo.redirectChain && httpInfo.redirectChain.length > 1) {
+      md += `- **Redirect Chain**:\n`;
+      for (let i = 0; i < httpInfo.redirectChain.length; i++) {
+        md += `  ${i + 1}. \`${httpInfo.redirectChain[i]}\`\n`;
+      }
+    }
+    md += `\n`;
+  }
 
   // Findings
   md += `## Prioritized Action Items\n\n`;
@@ -108,12 +120,13 @@ export function generateVerificationMarkdown(comparison: VerificationComparison)
   md += `- Current Scan: ${comparison.newScanTimestamp}\n\n`;
 
   md += `## Summary\n`;
-  md += `- 🟢 Resolved Issues: **${comparison.resolvedFindings.length}**\n`;
-  md += `- 🟡 Remaining Issues: **${comparison.remainingFindings.length}**\n`;
-  md += `- 🔴 New Issues: **${comparison.newFindings.length}**\n\n`;
+  md += `- 🟢 Resolved (Fixed): **${comparison.resolvedFindings.length}**\n`;
+  md += `- 🟡 Still Present: **${comparison.remainingFindings.length}**\n`;
+  md += `- 🔵 Changed Status: **${comparison.changedFindings.length}**\n`;
+  md += `- 🔴 New Issues Detected: **${comparison.newFindings.length}**\n\n`;
 
   if (comparison.resolvedFindings.length > 0) {
-    md += `### 🟢 Resolved Issues\n`;
+    md += `### 🟢 Resolved Issues (Fixed)\n`;
     for (const f of comparison.resolvedFindings) {
       md += `- [x] **[${f.severity.toUpperCase()}]** ${f.title}\n`;
     }
@@ -121,9 +134,17 @@ export function generateVerificationMarkdown(comparison: VerificationComparison)
   }
 
   if (comparison.remainingFindings.length > 0) {
-    md += `### 🟡 Remaining Issues\n`;
+    md += `### 🟡 Still Present\n`;
     for (const f of comparison.remainingFindings) {
       md += `- [ ] **[${f.severity.toUpperCase()}]** ${f.title}\n`;
+    }
+    md += `\n`;
+  }
+
+  if (comparison.changedFindings.length > 0) {
+    md += `### 🔵 Changed Status\n`;
+    for (const f of comparison.changedFindings) {
+      md += `- [ ] **[${f.severity.toUpperCase()}]** ${f.title} *(Severity/details updated)*\n`;
     }
     md += `\n`;
   }

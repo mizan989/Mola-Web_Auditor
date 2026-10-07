@@ -51,7 +51,7 @@ $$\text{Enter URL} \longrightarrow \text{Validate SSRF} \longrightarrow \text{In
 - **AI-Ready `issues.md` Artifact Generation** — One-click download or copy of structured Markdown reports specifically engineered to prompt AI coding agents (Gemini, Claude, Cursor, Copilot)
 - **Fix Verification & Rescan Diffing** — Re-auditing a site compares subsequent scan runs against previous baselines, clearly segregating `🟢 Resolved`, `🟡 Remaining`, and `🔴 New Issues`
 - **SSRF-Hardened Network Architecture** — Built-in RFC 1918 private IP range blocking, loopback mitigation, cloud metadata (`169.254.169.254`) isolation, and domain guardrails
-- **100% Stateless & Private** — Pure ephemeral in-memory scan processing; zero database storage, zero tracking cookies, and zero persistent URL logging
+- **Ephemeral In-Memory Scanning** — Audits are executed ephemerally in memory without application database persistence or tracking cookies. Note that upstream hosting infrastructure or edge CDNs may retain standard operational access logs.
 - **Quiet Developer Aesthetic** — Minimalist editorial layout, high-contrast typography, and full-viewport section views optimized for desktop and mobile
 
 <br>
@@ -269,10 +269,19 @@ Traditional audit suites rely on synthetic scores that reward superficial optimi
 ### SSRF-Hardened Security Architecture
 
 Auditing arbitrary URLs poses severe Server-Side Request Forgery risks. Mola implements hardened defense-in-depth controls:
-- **Protocol Whitelisting**: Only `http:` and `https:` schemes are permitted. Schemes such as `file:`, `ftp:`, `data:`, and `javascript:` are immediately rejected.
-- **Private IP Blocking**: Proactively resolves and blocks RFC 1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
-- **Loopback & Cloud Metadata Isolation**: Drops requests targeting `127.0.0.1`, `localhost`, `::1`, and cloud provider metadata interfaces (`169.254.169.254`, `metadata.google.internal`).
-- **Timeout & Quota Defenses**: Strict 12-second abort timeouts and 5MB payload caps prevent memory exhaustion attacks.
+- **Protocol & Port Restrictions**: Only `http:` and `https:` schemes with standard ports (80, 443) are permitted. Schemes such as `file:`, `ftp:`, `data:`, and `javascript:` as well as arbitrary ports are rejected.
+- **SSRF Redirect Traversal Protection**: Redirects are manually followed and validated hop-by-hop (up to 5 maximum redirects); every destination undergoes strict IP and DNS re-validation to prevent private redirection.
+- **Private IP & DNS Rebinding Defenses**: Centralized validation strictly blocks RFC 1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), carrier-grade NAT (`100.64.0.0/10`), link-local (`169.254.0.0/16`), loopback (`127.0.0.0/8`), IPv6 unique local (`fc00::/7`), link-local (`fe80::/10`), and IPv4-mapped IPv6 ranges. All resolved addresses from DNS are verified.
+- **Resource & Concurrency Limits**: Strict 15-second operation deadlines, 2.5MB response body streaming caps, 4KB request body limits, 15 requests/min per IP rate limiting, and 5 concurrent active scan limits prevent resource exhaustion.
+
+### Scan Modes: Quick Scan vs. Deep Scan
+
+Mola provides two genuinely differentiated scan modes:
+- **Quick Scan**: Fast, lightweight static document and network inspection. Collects HTTP telemetry (TTFB, protocol, status), response security headers, HTML document hygiene (titles, descriptions, canonicals, heading hierarchy), basic accessibility landmarks, and signature-verified technology detection.
+- **Deep Scan**: Comprehensive audit expanding upon Quick Scan with in-depth static document checks:
+  - **Subresource Integrity (SRI)**: Audits external third-party `<script>` tags for missing `integrity` attributes.
+  - **Cookie Security Attributes**: Evaluates `Set-Cookie` directives for `Secure`, `HttpOnly`, and `SameSite` flags.
+  - **Iframe Sandboxing & Lazy Loading**: Inspects `<iframe>` elements for `sandbox` policies and `loading="lazy"` attributes.
 
 ---
 
@@ -323,50 +332,62 @@ HOSTNAME=0.0.0.0
 ```text
 d:/PROJECTS/Mola/
 ├── .antideploy.json             # Antideploy configuration (mola.antideploy.app)
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions CI workflow
 ├── app/
 │   ├── api/
 │   │   └── scan/
-│   │       └── route.ts          # Secure scan API route handler
-│   ├── privacy/
-│   │   └── page.tsx              # Stateless privacy policy
-│   ├── terms/
-│   │   └── page.tsx              # Acceptable use terms
+│   │       └── route.ts          # Rate-limited & SSRF-isolated scan API route
+│   ├── components/
+│   │   ├── ExportControls.tsx    # Grouped Markdown & JSON export actions
+│   │   ├── FindingFilters.tsx    # Search, severity, and category filter bar
+│   │   ├── FindingItem.tsx       # Standardized finding card with ordered evidence
+│   │   ├── FindingList.tsx       # Finding card container & telemetry views
+│   │   ├── HeroSection.tsx       # Focused URL input & scan controls
+│   │   ├── ReportSummary.tsx     # Audit metadata & severity breakdown
+│   │   ├── ScanProgress.tsx      # Stage-based deterministic progress indicator
+│   │   └── VerificationSection.tsx # 4-way Fix Verification presentation
 │   ├── globals.css               # Design tokens & Tailwind CSS v4 setup
 │   ├── layout.tsx                # Root layout, metadata & brand navbar
 │   └── page.tsx                  # Interactive Auditor application UI
 ├── assets/
 │   ├── logo.png                  # High-resolution brand mark (512x512)
-│   ├── screenshot1.png           # Hero & scanner UI preview
+│   ├── screenshot1.png           # Hero UI preview
 │   └── screenshot2.png           # Telemetry & verification UI preview
 ├── lib/
-│   ├── compare.ts                # Client/server-isolated audit comparison engine
+│   ├── compare.ts                # Semantic finding comparison engine
 │   ├── exportJson.ts             # JSON export & file download helpers
 │   └── exportMarkdown.ts         # issues.md Markdown generator
-├── public/
-│   ├── apple-touch-icon.png      # Apple touch icon (180x180)
-│   ├── favicon-32x32.png         # 32x32 Favicon
-│   ├── favicon.ico               # Multi-size Favicon (16/32/48)
-│   ├── icon-192.png              # PWA icon (192x192)
-│   ├── logo.png                  # Brand logo
-│   ├── screenshot1.png           # Hero UI asset
-│   └── screenshot2.png           # Telemetry UI asset
 ├── server/
 │   ├── orchestrator.ts           # Scan pipeline & verification comparator
 │   ├── scanners/
-│   │   ├── a11y.ts               # Accessibility (alt, lang, landmarks)
+│   │   ├── a11y.ts               # Accessibility (alt, lang, form labels)
 │   │   ├── bestPractices.ts      # Doctype, UTF-8, deprecated markup
-│   │   ├── http.ts               # HTTP telemetry, headers, TLS, latency
+│   │   ├── deep.ts               # Deep scan (SRI, cookies, iframe sandboxing)
+│   │   ├── http.ts               # Streaming HTTP telemetry & redirect handler
 │   │   ├── performance.ts        # TTFB, compression, caching, scripts
-│   │   ├── security.ts           # CSP, HSTS, X-Frame, cookies, mixed content
+│   │   ├── security.ts           # CSP, HSTS, X-Frame, mixed content
 │   │   ├── seo.ts                # Title, meta description, canonical, h1-h6
-│   │   └── tech.ts               # Technology detection engine (Wappalyzer)
+│   │   └── tech.ts               # Evidence-based technology detection
 │   └── validators/
-│       └── url.ts                # SSRF guardrails & IP allowlist validation
+│       ├── dns.ts                # Multi-record DNS resolution & rebinding defense
+│       ├── ip.ts                 # Centralized IPv4 & IPv6 SSRF validator
+│       └── url.ts                # URL syntax, protocol, and port validator
+├── tests/
+│   ├── a11y-label.test.ts        # Accessible form label unit tests
+│   ├── compare-verification.test.ts # Semantic verification diff tests
+│   ├── exports.test.ts           # issues.md & verification markdown tests
+│   ├── ip-validation.test.ts     # IPv4 & IPv6 SSRF range tests
+│   ├── limits-redirects.test.ts  # Resource & redirect limit tests
+│   ├── tech-detection.test.ts    # Technology heuristic & evidence tests
+│   └── url-validation.test.ts    # URL & port restriction unit tests
 ├── types/
 │   └── audit.ts                  # Finding, Result & Verification schemas
+├── eslint.config.mjs             # ESLint configuration
+├── LICENSE                       # MIT License
 ├── next.config.ts                # Next.js security headers configuration
 ├── package.json                  # Dependencies & scripts
-├── postcss.config.mjs            # Tailwind CSS PostCSS plugin
 ├── tsconfig.json                 # Strict TypeScript configuration
 └── README.md                     # Project overview & documentation
 ```
@@ -379,7 +400,7 @@ Mola is deployed and hosted on **Antideploy** with continuous integration on eve
 
 - **Production URL**: [https://mola.antideploy.app](https://mola.antideploy.app)
 - **Deployment Spec**: [`.antideploy.json`](.antideploy.json) links to the project and triggers builds on each commit to `main`.
-- **Containerized Runtime**: Optimized Next.js 16 container, fully SSRF-hardened and stateless.
+- **Containerized Runtime**: Optimized Next.js 16 container, fully SSRF-hardened and ephemeral.
 
 ---
 
@@ -388,6 +409,12 @@ Mola is deployed and hosted on **Antideploy** with continuous integration on eve
 ```bash
 # Typecheck TypeScript codebase
 npm run typecheck
+
+# Lint codebase (0 errors, 0 warnings)
+npm run lint
+
+# Run automated unit tests
+npm test
 
 # Build optimized production bundle
 npm run build

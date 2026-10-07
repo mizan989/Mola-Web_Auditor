@@ -1,4 +1,4 @@
-import { AccessibilityInspection, Finding, PassedCheck } from "@/types/audit";
+import type { AccessibilityInspection, Finding, PassedCheck } from "../../types/audit.ts";
 
 export interface A11yAuditResult {
   summary: AccessibilityInspection;
@@ -6,6 +6,11 @@ export interface A11yAuditResult {
   passedChecks: PassedCheck[];
 }
 
+/**
+ * Audits accessibility compliance according to WCAG 2.1 AA baselines.
+ * Fixed according to ISSUE-020 & ISSUE-021 (strictly verifies accessible names for inputs;
+ * an input with only an `id` is properly recognized as unlabelled).
+ */
 export function auditAccessibility(htmlText: string): A11yAuditResult {
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
@@ -17,9 +22,9 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
 
   if (htmlTagMatch) {
     const langMatch = htmlTagMatch[0].match(/lang=["']([^"']+)["']/i);
-    if (langMatch) {
+    if (langMatch && langMatch[1].trim()) {
       hasLang = true;
-      langValue = langMatch[1];
+      langValue = langMatch[1].trim();
     }
   }
 
@@ -33,7 +38,7 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
       description: "The root <html> element does not specify a valid 'lang' attribute.",
       whyItMatters:
         "Screen readers rely on the lang attribute to invoke correct text-to-speech pronunciation rules, accent models, and dictionary translation.",
-      evidence: htmlTagMatch ? htmlTagMatch[0] : "<html> tag missing lang",
+      evidence: htmlTagMatch ? htmlTagMatch[0] : "<html> tag missing lang attribute",
       affectedTarget: "<html lang>",
       recommendation: "Add a valid BCP 47 language code (such as 'en' or 'en-US') to the <html> opening tag.",
       codeSnippet: '<html lang="en">',
@@ -52,7 +57,8 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
   const missingAlt: string[] = [];
 
   for (const img of allImages) {
-    if (!/alt=["'][^"']*["']/i.test(img)) {
+    // Check if alt attribute exists at all (even alt="" for decorative images is valid WCAG)
+    if (!/\balt\s*=\s*["'][^"']*["']/i.test(img)) {
       missingAlt.push(img.replace(/\s+/g, " ").slice(0, 90));
     }
   }
@@ -80,24 +86,63 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
       id: "a11y-images-alt-complete",
       category: "accessibility",
       title: "All Images Have Alt Attributes",
-      detail: `All ${allImages.length} images on the page declare alt attributes.`,
+      detail: `All ${allImages.length} images on the page declare alt attributes (informational or decorative).`,
     });
   }
 
-  // 3. Form input labeling
+  // 3. Form input accessible labelling (ISSUE-021: id alone is not a label)
+  // Collect all IDs referenced by <label for="...">
+  const labelForIds = new Set<string>();
+  const labelMatches = htmlText.matchAll(/<label\b[^>]*\bfor=["']([^"']+)["'][^>]*>/gi);
+  for (const match of labelMatches) {
+    if (match[1]) {
+      labelForIds.add(match[1].trim());
+    }
+  }
+
+  // Find all inputs wrapped inside <label>...</label>
+  const wrappedInputStrings: string[] = [];
+  const wrappingLabelMatches = htmlText.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/gi);
+  for (const match of wrappingLabelMatches) {
+    const inner = match[1];
+    const inputsInLabel = inner.match(/<input\b[^>]*>/gi) || [];
+    for (const inp of inputsInLabel) {
+      wrappedInputStrings.push(inp);
+    }
+  }
+
   const formInputs = htmlText.match(/<input\b[^>]*>/gi) || [];
   let unlabelledInputs = 0;
+  const unlabelledSamples: string[] = [];
+
   for (const input of formInputs) {
-    const typeMatch = input.match(/type=["']([^"']+)["']/i);
+    const typeMatch = input.match(/\btype=["']([^"']+)["']/i);
     const type = typeMatch ? typeMatch[1].toLowerCase() : "text";
-    if (["hidden", "submit", "button", "reset"].includes(type)) continue;
+    if (["hidden", "submit", "button", "reset", "image"].includes(type)) continue;
 
-    const hasAriaLabel = /aria-label(?:ledby)?=["'][^"']+["']/i.test(input);
-    const hasId = /id=["']([^"']+)["']/i.test(input);
-    const hasTitle = /title=["']([^"']+)["']/i.test(input);
+    // Check for explicit ARIA accessible name
+    const ariaMatch = input.match(/\baria-label(?:ledby)?=["']([^"']*)["']/i);
+    const hasAria = Boolean(ariaMatch && ariaMatch[1].trim());
 
-    if (!hasAriaLabel && !hasTitle && !hasId) {
+    // Check for title attribute
+    const titleMatch = input.match(/\btitle=["']([^"']*)["']/i);
+    const hasTitle = Boolean(titleMatch && titleMatch[1].trim());
+
+    // Check if associated with an external <label for="id">
+    const idMatch = input.match(/\bid=["']([^"']+)["']/i);
+    const inputId = idMatch ? idMatch[1].trim() : null;
+    const hasAssociatedLabelFor = Boolean(inputId && labelForIds.has(inputId));
+
+    // Check if input is nested inside a <label>
+    const isWrappedInLabel = wrappedInputStrings.some((w) => w === input);
+
+    const hasAccessibleName = hasAria || hasTitle || hasAssociatedLabelFor || isWrappedInLabel;
+
+    if (!hasAccessibleName) {
       unlabelledInputs++;
+      if (unlabelledSamples.length < 5) {
+        unlabelledSamples.push(input.replace(/\s+/g, " ").slice(0, 90));
+      }
     }
   }
 
@@ -106,17 +151,25 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
       id: "a11y-inputs-unlabelled",
       category: "accessibility",
       severity: "medium",
-      priority: "recommended",
+      priority: "fix-first",
       title: "Form Inputs Missing Accessible Labels",
-      description: `${unlabelledInputs} input field(s) lack an associated <label>, aria-label, or title.`,
+      description: `${unlabelledInputs} interactive input field(s) lack an accessible name (no associated <label for>, wrapping <label>, aria-label, or title).`,
       whyItMatters:
-        "Unlabelled form fields leave blind and low-vision users unable to identify what input data is expected.",
-      evidence: `Found ${unlabelledInputs} interactive inputs without accessible labels`,
+        "Unlabelled form fields leave screen reader users unable to know what input data is expected. An 'id' attribute alone does not provide an accessible name.",
+      evidence: `Sample unlabelled input: ${unlabelledSamples[0] || `Found ${unlabelledInputs} unlabelled inputs`}`,
       affectedTarget: "<input> Form Controls",
       recommendation:
-        "Associate an explicit <label for=\"...\"> with each input, or provide an aria-label attribute.",
-      codeSnippet: '<label for="search">Search</label>\n<input id="search" type="text" />',
+        "Associate an explicit <label for=\"...\"> with each input, wrap the input inside a <label>, or provide an aria-label attribute.",
+      codeSnippet: '<label for="email-field">Email address</label>\n<input id="email-field" type="email" />',
       instancesCount: unlabelledInputs,
+      instances: unlabelledSamples,
+    });
+  } else if (formInputs.length > 0) {
+    passedChecks.push({
+      id: "a11y-inputs-labelled",
+      category: "accessibility",
+      title: "All Form Inputs Have Accessible Labels",
+      detail: "Interactive form controls have verifiable accessible names via labels or ARIA attributes.",
     });
   }
 
@@ -134,10 +187,10 @@ export function auditAccessibility(htmlText: string): A11yAuditResult {
       description: "No <main> landmark element was found wrapping primary content.",
       whyItMatters:
         "Landmark elements allow screen reader and keyboard users to jump directly to primary content, bypassing repeated navigation headers.",
-      evidence: '<main> or role="main" → not found',
+      evidence: '<main> or role="main" → not found in document',
       affectedTarget: "Page Layout",
       recommendation: "Wrap primary body content inside a <main> semantic container.",
-      codeSnippet: "<main id=\"main-content\">\n  <!-- Primary content -->\n</main>",
+      codeSnippet: '<main id="main-content">\n  <!-- Primary content -->\n</main>',
     });
   } else {
     passedChecks.push({

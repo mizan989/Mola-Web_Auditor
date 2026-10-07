@@ -1,12 +1,12 @@
+import crypto from "node:crypto";
 import {
   Finding,
   FindingCategory,
   FindingPriority,
   PassedCheck,
   ScanResult,
-  VerificationComparison,
 } from "@/types/audit";
-import { validateAndSanitizeUrl } from "./validators/url";
+import { validateUrlAsync } from "./validators/url";
 import { performHttpInspection } from "./scanners/http";
 import { auditSecurity } from "./scanners/security";
 import { auditPerformance } from "./scanners/performance";
@@ -14,15 +14,13 @@ import { auditSeo } from "./scanners/seo";
 import { auditAccessibility } from "./scanners/a11y";
 import { detectTechnologies } from "./scanners/tech";
 import { auditBestPractices } from "./scanners/bestPractices";
+import { auditDeepScan } from "./scanners/deep";
 
 export interface ScanOptions {
   url: string;
   mode?: "quick" | "deep";
 }
 
-/**
- * Priority scoring helper for ordering findings
- */
 const priorityOrder: Record<FindingPriority, number> = {
   critical: 4,
   "fix-first": 3,
@@ -37,27 +35,29 @@ const severityOrder = {
 };
 
 /**
- * Runs a complete audit on the given URL following PRD.md and SECURITY.md guidelines.
+ * Orchestrates a complete website audit with strict security validation and verifiable evidence.
+ * Complies with SECURITY.md, PRD.md, and issues.md specifications.
  */
 export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult> {
   const startTime = Date.now();
   const scanMode = options.mode === "deep" ? "deep" : "quick";
 
-  // Step 1: Validate URL & enforce SSRF controls
-  const validation = validateAndSanitizeUrl(options.url);
+  // Step 1: Validate URL and enforce comprehensive SSRF controls (ISSUE-001, ISSUE-002, ISSUE-003)
+  const validation = await validateUrlAsync(options.url);
   if (!validation.isValid || !validation.normalizedUrl) {
     throw new Error(validation.error || "Invalid target URL.");
   }
 
   const targetUrl = validation.normalizedUrl;
   const hostname = new URL(targetUrl).hostname;
-  const scanId = `mola-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  // Replace Math.random with crypto.randomUUID() (ISSUE-034)
+  const scanId = `mola-${crypto.randomUUID()}`;
 
-  // Step 2: Perform controlled HTTP inspection
+  // Step 2: Controlled HTTP inspection with streaming limit and redirect tracking (ISSUE-010..014)
   const httpResult = await performHttpInspection(targetUrl);
-  const { info, htmlText, finalUrl, rawHeaders } = httpResult;
+  const { info, htmlText, finalUrl, rawHeaders, isTruncated } = httpResult;
 
-  // Step 3: Run all audit engines
+  // Step 3: Run core audit engines
   const security = auditSecurity(rawHeaders, finalUrl, htmlText);
   const performance = auditPerformance(info.responseTimeMs, info.contentLength, rawHeaders, htmlText);
   const seo = auditSeo(htmlText);
@@ -65,14 +65,40 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   const bestPractices = auditBestPractices(htmlText);
   const technologies = detectTechnologies(rawHeaders, htmlText);
 
-  // Step 4: Aggregate findings and passed checks
+  // Step 4: Run Deep Scan engine if requested (ISSUE-009, ISSUE-023)
+  let deepFindings: Finding[] = [];
+  let deepPassed: PassedCheck[] = [];
+  if (scanMode === "deep") {
+    const deepResult = auditDeepScan(rawHeaders, finalUrl, htmlText);
+    deepFindings = deepResult.findings;
+    deepPassed = deepResult.passedChecks;
+  }
+
+  // Step 5: Aggregate findings
   const allFindings: Finding[] = [
     ...security.findings,
     ...performance.findings,
     ...seo.findings,
     ...accessibility.findings,
     ...bestPractices.findings,
+    ...deepFindings,
   ];
+
+  if (isTruncated) {
+    allFindings.push({
+      id: "perf-payload-truncated",
+      category: "performance",
+      severity: "low",
+      priority: "investigate",
+      title: "Document Payload Exceeded Inspection Limit",
+      description: "The remote document body exceeded the maximum 2.5 MB inspection limit and was safely capped.",
+      whyItMatters:
+        "Extremely large HTML payloads degrade mobile network performance, CPU parsing time, and memory usage.",
+      evidence: `Body stream reached maximum size limit (2.5 MB); parsing terminated safely`,
+      affectedTarget: "HTTP Response Body",
+      recommendation: "Ensure initial server-rendered HTML documents remain under 1 MB.",
+    });
+  }
 
   const allPassed: PassedCheck[] = [
     ...security.passedChecks,
@@ -80,16 +106,17 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     ...seo.passedChecks,
     ...accessibility.passedChecks,
     ...bestPractices.passedChecks,
+    ...deepPassed,
   ];
 
-  // Step 5: Normalize and Sort Findings by Severity and Priority
+  // Step 6: Sort findings deterministically by Severity then Priority
   allFindings.sort((a, b) => {
     const sevDiff = severityOrder[b.severity] - severityOrder[a.severity];
     if (sevDiff !== 0) return sevDiff;
     return priorityOrder[b.priority] - priorityOrder[a.priority];
   });
 
-  // Step 6: Calculate Summary Counts
+  // Step 7: Calculate summary metrics
   const categoryCounts: Record<FindingCategory, number> = {
     security: 0,
     performance: 0,
@@ -110,6 +137,8 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   }
 
   const scanDurationMs = Date.now() - startTime;
+  const completeness = isTruncated ? "partial" : "full";
+  const status = isTruncated ? "partial" : "completed";
 
   return {
     scanId,
@@ -119,7 +148,8 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     scanTimestamp: new Date().toISOString(),
     scanDurationMs,
     scanMode,
-    status: "completed",
+    status,
+    completeness,
     summary: {
       totalFindings: allFindings.length,
       highCount,
@@ -139,4 +169,3 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
 }
 
 export { compareAuditResults } from "@/lib/compare";
-

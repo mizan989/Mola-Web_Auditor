@@ -37,6 +37,7 @@ export interface DetectedTechnology {
   category: "Framework" | "CMS" | "CDN / Host" | "Analytics" | "Server" | "Library" | "UI / Fonts";
   version?: string;
   confidence: number;
+  evidence?: string;
 }
 
 export interface HttpInspectionInfo {
@@ -49,6 +50,7 @@ export interface HttpInspectionInfo {
   isHttps: boolean;
   redirectChain: string[];
   headers: Record<string, string>;
+  isTruncated?: boolean;
 }
 
 export interface PerformanceMetrics {
@@ -94,6 +96,7 @@ export interface ScanResult {
   scanDurationMs: number;
   scanMode: "quick" | "deep";
   status: "completed" | "partial" | "failed";
+  completeness: "full" | "partial";
   errorMessage?: string;
   summary: {
     totalFindings: number;
@@ -118,6 +121,7 @@ export interface VerificationComparison {
   targetUrl: string;
   resolvedFindings: Finding[];
   remainingFindings: Finding[];
+  changedFindings: Finding[];
   newFindings: Finding[];
   totalPrevious: number;
   totalCurrent: number;

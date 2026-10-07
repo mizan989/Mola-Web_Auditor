@@ -1,13 +1,45 @@
 import net from "node:net";
+import { isPrivateOrReservedIp } from "./ip.ts";
+import { resolveAndValidateDns } from "./dns.ts";
 
 export interface UrlValidationResult {
   isValid: boolean;
   normalizedUrl?: string;
+  hostname?: string;
+  resolvedAddresses?: string[];
   error?: string;
 }
 
+const ALLOWED_PORTS = new Set(["80", "443", ""]);
+
+const FORBIDDEN_HOSTS = new Set([
+  "localhost",
+  "loopback",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+  "metadata.google.internal",
+  "instance-data",
+  "169.254.169.254",
+  "metadata.aws",
+]);
+
+const FORBIDDEN_SUFFIXES = [
+  ".local",
+  ".internal",
+  ".lan",
+  ".corp",
+  ".home",
+  ".home.arpa",
+  ".onion",
+  ".test",
+  ".example",
+  ".invalid",
+  ".localhost",
+];
+
 /**
- * Validates and sanitizes a URL against SSRF attacks and unsafe target ranges.
+ * Validates and sanitizes a URL's syntax, protocol, and hostname format against SSRF attacks.
  * Complies with SECURITY.md and PRD.md FR-001.
  */
 export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
@@ -16,6 +48,11 @@ export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
   }
 
   let input = rawInput.trim();
+
+  // Maximum URL length guardrail
+  if (input.length > 2048) {
+    return { isValid: false, error: "URL exceeds maximum permitted length of 2048 characters." };
+  }
 
   // Prepend https:// if no protocol provided
   if (!/^https?:\/\//i.test(input)) {
@@ -29,7 +66,7 @@ export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
     return { isValid: false, error: "Invalid URL syntax. Please enter a valid website address." };
   }
 
-  // Protocol check
+  // Protocol check: Only HTTP and HTTPS
   const protocol = parsed.protocol.toLowerCase();
   if (protocol !== "http:" && protocol !== "https:") {
     return {
@@ -47,38 +84,24 @@ export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
 
   // Reject credentials in URL (user:pass@host)
   if (parsed.username || parsed.password) {
-    return { isValid: false, error: "URLs with credentials (user:pass) are not allowed." };
+    return { isValid: false, error: "URLs containing user credentials are not allowed." };
+  }
+
+  // Port restrictions: Only default HTTP(80) and HTTPS(443) ports are permitted
+  if (!ALLOWED_PORTS.has(parsed.port)) {
+    return {
+      isValid: false,
+      error: `Port '${parsed.port}' is not permitted. Only standard web ports (80, 443) are supported.`,
+    };
   }
 
   // Explicit loopback and local names
-  const forbiddenHosts = [
-    "localhost",
-    "loopback",
-    "127.0.0.1",
-    "0.0.0.0",
-    "::1",
-    "metadata.google.internal",
-    "instance-data",
-  ];
-  if (forbiddenHosts.includes(hostname)) {
+  if (FORBIDDEN_HOSTS.has(hostname)) {
     return { isValid: false, error: "Scanning local, loopback, or cloud metadata endpoints is prohibited." };
   }
 
   // Forbidden domain suffixes
-  const forbiddenSuffixes = [
-    ".local",
-    ".internal",
-    ".lan",
-    ".corp",
-    ".home",
-    ".home.arpa",
-    ".onion",
-    ".test",
-    ".example",
-    ".invalid",
-    ".localhost",
-  ];
-  for (const suffix of forbiddenSuffixes) {
+  for (const suffix of FORBIDDEN_SUFFIXES) {
     if (hostname.endsWith(suffix)) {
       return { isValid: false, error: `Domains ending in '${suffix}' are internal or reserved and cannot be scanned.` };
     }
@@ -99,61 +122,33 @@ export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
   return {
     isValid: true,
     normalizedUrl: parsed.toString(),
+    hostname,
   };
 }
 
 /**
- * Checks whether an IP address belongs to RFC 1918, Link-local, Loopback, or Multicast ranges.
+ * Performs full validation including asynchronous DNS resolution and checking all resolved IP addresses.
+ * Guarantees SSRF defense survives hostnames resolving to private addresses.
  */
-export function isPrivateOrReservedIp(ip: string): boolean {
-  if (ip === "127.0.0.1" || ip === "0.0.0.0" || ip === "::1") {
-    return true;
+export async function validateUrlAsync(rawInput: string): Promise<UrlValidationResult> {
+  const syncResult = validateAndSanitizeUrl(rawInput);
+  if (!syncResult.isValid || !syncResult.hostname) {
+    return syncResult;
   }
 
-  const v4 = net.isIPv4(ip);
-  if (v4) {
-    const parts = ip.split(".").map(Number);
-    if (parts.length !== 4) return true;
-
-    const [a, b] = parts;
-
-    // 0.0.0.0/8 (Current network)
-    if (a === 0) return true;
-    // 10.0.0.0/8 (Private RFC 1918)
-    if (a === 10) return true;
-    // 127.0.0.0/8 (Loopback)
-    if (a === 127) return true;
-    // 169.254.0.0/16 (Link Local / Cloud Metadata)
-    if (a === 169 && b === 254) return true;
-    // 172.16.0.0/12 (Private RFC 1918)
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    // 192.168.0.0/16 (Private RFC 1918)
-    if (a === 192 && b === 168) return true;
-    // 100.64.0.0/10 (Carrier Grade NAT)
-    if (a === 100 && b >= 64 && b <= 127) return true;
-    // 224.0.0.0/4 (Multicast)
-    if (a >= 224 && a <= 239) return true;
-    // 240.0.0.0/4 (Reserved)
-    if (a >= 240) return true;
-
-    return false;
+  const dnsResult = await resolveAndValidateDns(syncResult.hostname);
+  if (!dnsResult.isValid) {
+    return {
+      isValid: false,
+      error: dnsResult.error || "DNS resolution failed or resolved to restricted destination.",
+    };
   }
 
-  // IPv6 checks
-  const lower = ip.toLowerCase();
-  if (
-    lower.startsWith("fc") || // ULA
-    lower.startsWith("fd") || // ULA
-    lower.startsWith("fe8") || // Link-local
-    lower.startsWith("fe9") ||
-    lower.startsWith("fea") ||
-    lower.startsWith("feb") ||
-    lower.startsWith("::ffff:127.") || // IPv4-mapped loopback
-    lower.startsWith("::ffff:10.") || // IPv4-mapped private
-    lower.startsWith("::ffff:192.168.")
-  ) {
-    return true;
-  }
-
-  return false;
+  return {
+    ...syncResult,
+    resolvedAddresses: dnsResult.addresses,
+  };
 }
+
+export { isPrivateOrReservedIp } from "./ip.ts";
+export { resolveAndValidateDns } from "./dns.ts";
