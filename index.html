@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mola — fast, evidence-based web auditing for developers.">
+  <title>Mola — Web Auditor</title>
+    <link rel="icon" type="image/x-icon" href="public/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="public/favicon-32x32.png">
+  <link rel="stylesheet" href="css/mola-demo.css">
+  <script src="js/mola-demo.js" defer></script>
+
+</head>
+<body>
+  <header class="navbar">
+    <a class="brand" href="#">
+      <img src="assets/logo.png" alt="Mola Logo" width="32" height="32" class="brand-logo">
+      <span>Mola</span>
+    </a>
+    <a class="github" href="https://github.com/mizan989/Mola-Web_Auditor" target="_blank" rel="noreferrer" aria-label="Mola GitHub repository">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 8.36 22.93c.58.1.79-.25.79-.56v-2.17c-3.2.7-3.87-1.35-3.87-1.35-.53-1.34-1.3-1.7-1.3-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.52-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.47.11-3.06 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.73 0c2.18-1.49 3.14-1.18 3.14-1.18.63 1.59.24 2.77.12 3.06.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.55A11.5 11.5 0 0 0 12 .5Z"/></svg>
+    </a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">OPEN-SOURCE WEB AUDITING</p>
+        <h1>Audit your website.<br><span>Fix what actually matters.</span></h1>
+        <p class="hero-copy">A focused, evidence-based audit for developers. Enter a URL and get a clear report of what needs attention.</p>
+
+        <form id="auditForm" class="audit-form">
+          <label class="sr-only" for="url">Website URL</label>
+          <input id="url" type="url" placeholder="https://example.com" autocomplete="url" required>
+          <button type="submit" id="auditButton">Audit</button>
+        </form>
+
+        <p class="subtle">Free · Open source · No account required</p>
+
+        <div id="scanPanel" class="scan-panel hidden" aria-live="polite">
+          <div class="scan-top">
+            <span id="scanStatus">Ready</span>
+            <span id="scanUrl"></span>
+          </div>
+          <div class="progress"><span id="progressBar"></span></div>
+          <div id="scanSteps" class="scan-steps">
+            <span>Preparing scan</span>
+            <span>Inspecting page</span>
+            <span>Analyzing findings</span>
+            <span>Building report</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section report-section" id="report">
+      <div class="section-heading">
+        <p class="eyebrow">REPORT-FIRST</p>
+        <h2>Useful findings, not vanity scores.</h2>
+        <p>Mola focuses on evidence, impact, and what to fix next.</p>
+      </div>
+
+      <div class="report-card">
+        <div class="report-header">
+          <div>
+            <span class="label">AUDIT REPORT</span>
+            <h3 id="reportTitle">example.com</h3>
+          </div>
+          <span class="status">Demo result</span>
+        </div>
+
+        <div class="summary-grid">
+          <div><strong>12</strong><span>Findings</span></div>
+          <div><strong>4</strong><span>High priority</span></div>
+          <div><strong>7</strong><span>Evidence items</span></div>
+        </div>
+
+        <div class="finding high">
+          <div class="finding-meta"><span class="severity">HIGH</span><span>HTTP headers</span></div>
+          <h4>Content-Security-Policy is missing</h4>
+          <p>A CSP can reduce the impact of certain client-side injection attacks.</p>
+          <details><summary>View evidence</summary><code>response.headers["content-security-policy"] → missing</code></details>
+        </div>
+
+        <div class="finding medium">
+          <div class="finding-meta"><span class="severity">MEDIUM</span><span>Metadata</span></div>
+          <h4>Meta description is missing</h4>
+          <p>Add a concise description that accurately represents the page.</p>
+          <details><summary>View evidence</summary><code>&lt;meta name="description"&gt; → not found</code></details>
+        </div>
+
+        <div class="finding low">
+          <div class="finding-meta"><span class="severity">LOW</span><span>Resources</span></div>
+          <h4>Image dimensions are not declared</h4>
+          <p>Declared dimensions can help reduce layout movement while resources load.</p>
+        </div>
+
+        <div class="report-actions">
+          <button class="secondary" id="copyButton">Copy Markdown</button>
+          <button class="secondary" id="rescanButton">Rescan</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section workflow">
+      <div class="section-heading">
+        <p class="eyebrow">WORKFLOW</p>
+        <h2>From finding to fix.</h2>
+      </div>
+      <div class="steps">
+        <article><span>01</span><h3>Detect</h3><p>Inspect the target and identify observable issues.</p></article>
+        <article><span>02</span><h3>Explain</h3><p>Show why the issue matters with supporting evidence.</p></article>
+        <article><span>03</span><h3>Export</h3><p>Copy or export a structured report for your workflow.</p></article>
+        <article><span>04</span><h3>Verify</h3><p>Fix the confirmed issue and rescan to validate it.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand"><img src="assets/logo.png" alt="Mola Logo" width="32" height="32" class="brand-logo"><span>Mola</span></div>
+    <div class="footer-links">
+      <a href="https://github.com/mizan989" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+    </div>
+    <p>Built by Md Mizan</p>
+  </footer>
+
+  
+</body>
+</html>

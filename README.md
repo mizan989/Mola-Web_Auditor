@@ -1,322 +1,340 @@
-# Mola — Web Auditor
+<p align="center">
+  <a href="https://github.com/mizan989/Mola-Web_Auditor">
+    <img src="./assets/logo.png" alt="Mola Logo" width="100" height="100">
+  </a>
+</p>
 
-> A fast, open-source web auditing tool that analyzes websites, identifies actionable issues, and generates evidence-based reports for developers.
+<div align="center">
 
-## Overview
+# Mola
 
-**Mola** is a developer-focused web auditing tool built to answer a simple question:
+### Minimal, Open-Source Web Auditing & Telemetry Engine for Developers. Non-destructive URL inspection, security header analysis, and deterministic finding correlation with AI-ready `issues.md` exports.
 
-> **What actually needs fixing on this website?**
+<br/>
 
-Enter a URL, let Mola inspect the site, and receive a structured report containing actionable findings, supporting evidence, severity, impact, and recommendations.
+<a href="#-quick-start"><img src="https://img.shields.io/badge/Docs-Quickstart-06141B?style=for-the-badge&logo=gitbook&logoColor=white" alt="Docs"></a>
+<a href="https://github.com/mizan989/Mola-Web_Auditor"><img src="https://img.shields.io/badge/Website-Mola-CCD0CF?style=for-the-badge&logoColor=253745" alt="Website"></a>
+<a href="https://github.com/mizan989/Mola-Web_Auditor/discussions"><img src="https://img.shields.io/badge/Community-Discussions-06141B?style=for-the-badge&logo=github&logoColor=white" alt="Discussions"></a>
 
-Mola is designed to be useful before, during, and after development — without turning a website audit into an overloaded dashboard.
+<a href="#-ways-to-run-mola"><img src="https://img.shields.io/badge/Mola%20App-Next.js%2016%20%2B%20TypeScript-06141B?style=for-the-badge&logoColor=white" alt="Mola App"></a>
+<a href="#-flagship-audit-workflow"><img src="https://img.shields.io/badge/Try%20Live%20Demo-253745?style=for-the-badge&logoColor=white" alt="Try Live Demo"></a>
 
-## Why Mola?
+<a href="https://github.com/mizan989/Mola-Web_Auditor/stargazers"><img src="https://img.shields.io/github/stars/mizan989/Mola-Web_Auditor?style=flat-square" alt="GitHub Stars"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-06141B?style=flat-square" alt="License"></a>
+<a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js" alt="Next.js"></a>
+<a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+<a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-CSS%20v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
+<a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
 
-Mola focuses on:
+</div>
 
-- **Evidence over assumptions**
-- **Actionable findings over vanity scores**
-- **Clear explanations over technical noise**
-- **Prioritization over endless issue lists**
-- **Developer workflows over generic dashboards**
-
-Mola does **not** invent findings, evidence, scores, or successful checks.
-
-## Core Workflow
-
-```text
-Enter URL
-    ↓
-Scan
-    ↓
-Analyze
-    ↓
-Collect Evidence
-    ↓
-Prioritize Findings
-    ↓
-Generate Report
-    ↓
-Fix in Your Codebase
-    ↓
-Rescan & Verify
-```
-
-## Features
-
-### Auditing
-
-- Quick Scan
-- Deep Scan
-- Website technology detection
-- HTTP and infrastructure inspection
-- Visual snapshot
-- Evidence-backed findings
-- Severity classification
-- Finding prioritization
-- Duplicate finding grouping
-
-### Reports
-
-- Technical audit report
-- Expandable findings
-- Finding search and filters
-- Scan summary
-- Target URL details
-- Evidence and affected resources
-- Recommendations
-- Partial/failed check states
-- Markdown report generation
-- `issues.md` export
-- JSON export
-- Copy Markdown
-- Rescan and verification
-
-### Developer Workflow
-
-A generated `issues.md` file can be provided to an AI coding assistant such as ChatGPT, Claude, Cursor, or Antigravity.
-
-The report instructs the coding assistant to inspect the actual codebase, verify findings, make only confirmed changes, and validate the result.
-
-Mola does not attempt to replace your coding environment.
-
-## What Mola Checks
-
-Depending on scan mode and what can safely be observed, Mola can inspect areas such as:
-
-- Page structure
-- Metadata
-- Links and resources
-- HTTP behavior
-- Security-related headers
-- Performance-related signals
-- Accessibility-related signals
-- Technology information
-- Resource loading
-- Infrastructure-related observations
-- Other evidence-based website issues
-
-Not every check is available for every target.
-
-Mola clearly distinguishes between:
-
-- Confirmed findings
-- Observations
-- Passed checks
-- Unavailable checks
-- Failed checks
-- Partial scan results
-
-## No Arbitrary Score
-
-Mola intentionally avoids a meaningless single-number website score.
-
-Instead, it presents:
-
-**What is wrong → Why it matters → Evidence → How to improve it → What to prioritize**
-
-## Security
-
-Security is a core part of Mola because the scanner accepts user-controlled URLs.
-
-Mola treats submitted URLs and retrieved website content as untrusted.
-
-Security considerations include:
-
-- SSRF protection
-- Private/internal network blocking
-- Cloud metadata protection
-- Redirect validation
-- DNS rebinding defenses
-- Network/egress isolation
-- Request and resource limits
-- Rate limiting
-- Safe error handling
-- Scanner isolation
-- Dependency security
-- Secret protection
-
-See [`SECURITY.md`](SECURITY.md) for the complete security architecture and policy.
-
-> Scanner safety is a release requirement. Security controls must never be disabled simply to make scanning easier.
-
-## Design Philosophy
-
-Mola follows a simple design principle:
-
-> **Minimal, modern, premium, calm, fast, and intentional.**
-
-The interface prioritizes:
-
-- Clear information hierarchy
-- Evidence-first reporting
-- Responsive design
-- Accessibility
-- Fast interactions
-- Restrained visual effects
-- Consistent components
-- Developer-focused UX
-
-Mola intentionally avoids excessive glassmorphism, gradients, animations, cards, badges, decorative UI, and generic AI-dashboard patterns.
-
-See [`DESIGN.md`](DESIGN.md) for the complete design system.
-
-## Technology
-
-The intended stack is centered around:
-
-### Frontend
-
-- Next.js
-- TypeScript
-- Tailwind CSS
-- Lucide Icons
-
-### Backend
-
-- Node.js
-- TypeScript
-- Fastify or Express
-- Playwright for browser-based/deep scanning where required
-
-### Data
-
-Mola is initially designed to be stateless and does not require a persistent database for its core workflow.
-
-The final implementation must remain consistent with [`ARCHITECTURE.md`](ARCHITECTURE.md).
-
-## Documentation
-
-| Document | Purpose |
-|---|---|
-| [`PRD.md`](PRD.md) | Product requirements and scope |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Technical architecture |
-| [`RULES.md`](RULES.md) | Development and AI-agent rules |
-| [`SECURITY.md`](SECURITY.md) | Security architecture and policy |
-| [`DESIGN.md`](DESIGN.md) | UI/UX and design system |
-| `README.md` | Project overview and getting started |
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js
-- npm, pnpm, or another supported package manager
-- Git
-
-Additional requirements may be needed for browser-based scanning depending on the implementation.
-
-### Clone
-
-```bash
-git clone https://github.com/mizan989/Mola-Web_Auditor.git
-cd Mola-Web_Auditor
-```
-
-### Install
-
-Install dependencies according to the repository's package structure.
-
-```bash
-npm install
-```
-
-### Environment Variables
-
-If environment variables are required:
-
-```bash
-cp .env.example .env.local
-```
-
-Never commit secrets. The actual `.env.example` and application configuration are the source of truth.
-
-### Development
-
-```bash
-npm run dev
-```
-
-The exact commands may differ between frontend and backend packages depending on the final repository structure.
-
-## Production Verification
-
-Before considering a change complete:
-
-```text
-Lint
- ↓
-Type Check
- ↓
-Tests
- ↓
-Build
- ↓
-Runtime Verification
- ↓
-Security Verification
-```
-
-Security-sensitive changes require additional security testing.
-
-## Contributing
-
-Before making changes:
-
-1. Read [`PRD.md`](PRD.md).
-2. Read [`ARCHITECTURE.md`](ARCHITECTURE.md).
-3. Read [`RULES.md`](RULES.md).
-4. Read [`SECURITY.md`](SECURITY.md) for security-sensitive work.
-5. Read [`DESIGN.md`](DESIGN.md) for UI work.
-
-### Contribution Principles
-
-- Keep changes focused.
-- Reuse existing components and utilities.
-- Do not introduce unnecessary dependencies.
-- Do not weaken security controls.
-- Do not fabricate audit findings or evidence.
-- Preserve existing functionality.
-- Test changes before submitting them.
-- Update documentation when behavior changes.
-
-## Responsible Security Disclosure
-
-If you discover a security vulnerability in Mola, do not publicly disclose exploitable details before the issue has been investigated.
-
-Provide:
-
-- Clear description
-- Reproduction steps
-- Affected component
-- Potential impact
-- Relevant evidence
-
-Avoid destructive testing, privacy violations, or unauthorized access to systems.
-
-## Project Principles
-
-```text
-Evidence over assumptions.
-Actionable findings over vanity scores.
-Simple UX over visual noise.
-Security over convenience.
-Reuse over reinvention.
-Transparency over false certainty.
-```
-
-## Status
-
-Mola is under active development.
-
-Features and architecture may evolve as implementation progresses. Documentation should be updated whenever the actual product or security posture changes.
-
-## License
-
-Mola is open source. See [`LICENSE`](LICENSE) for the applicable license.
+> [!TIP]
+> **Developer Web Auditing Ready!** Enter any URL to receive concrete evidence, HTTP telemetry, and one-click `issues.md` exports for AI coding assistants (Gemini, Claude, Cursor) — [Get started locally in under 60 seconds](#-quick-start).
 
 ---
 
-**Built by Md Mizan**
+## Mola Overview
+
+Mola is a minimal, evidence-first web auditing tool built for developers who want a fast, understandable way to discover problems in any website. Rather than overwhelming developers with arbitrary vanity scores, decorative 0–100 rings, or vague generalities, Mola provides concrete, verifiable observations. Every finding explains what was detected, displays the exact evidence, identifies the affected element or header, clarifies why it matters, and provides an actionable code snippet to fix it.
+
+Mola is built around an intuitive engineering loop:
+
+$$\text{Enter URL} \longrightarrow \text{Scan} \longrightarrow \text{Inspect Evidence} \longrightarrow \text{Fix} \longrightarrow \text{Verify}$$
+
+**Key Capabilities:**
+
+- **Evidence-First Technical Reporting** — Every audit finding includes raw observed evidence, response headers, or affected DOM snippets rather than speculative assumptions
+- **Zero Vanity Scores** — Replaces arbitrary percentage scores with ranked, actionable engineering priorities (`High`, `Medium`, `Low` & `Fix First`)
+- **Deep HTTP & Infrastructure Telemetry** — Inspects TTFB latency, TLS protocols, HTTP compression (Brotli/Gzip), redirect chains, and server headers
+- **Automated Technology Fingerprinting** — Detects underlying frameworks (Next.js, React, Vue), CDNs (Cloudflare, Vercel, Netlify), and CMS engines
+- **AI-Ready `issues.md` Artifact Generation** — One-click download or copy of structured Markdown reports specifically engineered to prompt AI coding agents (Gemini, Claude, Cursor, Copilot)
+- **Fix Verification & Rescan Diffing** — Re-auditing a site compares subsequent scan runs against previous baselines, clearly segregating `🟢 Resolved`, `🟡 Remaining`, and `🔴 New Issues`
+- **SSRF-Hardened Network Architecture** — Built-in RFC 1918 private IP range blocking, loopback mitigation, cloud metadata (169.254.169.254) isolation, and domain guardrails
+- **100% Stateless & Private** — Pure ephemeral in-memory scan processing; zero database storage, zero tracking cookies, zero persistent URL logging
+
+<br>
+
+<div align="center">
+  <pre>
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                     MOLA                                        │
+│        Target Input ➔ SSRF Validation ➔ HTTP Telemetry ➔ Audit Engines          │
+├───────────────────────────────┬─────────────────────────────────────────────────┤
+│  🛡️ Security Header Engine    │  ⚡ Performance & Asset Engine                   │
+│   • CSP, HSTS, X-Frame-Options│    • TTFB Latency Benchmark                     │
+│   • Referrer & Permissions    │    • Compression (Brotli/Gzip)                  │
+│   • Version Banner Leakage    │    • Render-blocking scripts                    │
+├───────────────────────────────┼─────────────────────────────────────────────────┤
+│  🔍 SEO & Heading Hierarchy   │  ♿ Accessibility (a11y) Verification            │
+│   • Title, Meta Description   │    • Image alt completeness                     │
+│   • OpenGraph & Canonical     │    • HTML lang attribute                        │
+│   • Heading levels (h1-h6)    │    • Semantic landmark navigation               │
+├───────────────────────────────┼─────────────────────────────────────────────────┤
+│  📊 Technology Detection      │  🔁 Fix Verification & Export                   │
+│   • Frameworks (Next/React)   │    • issues.md Markdown Export                  │
+│   • CMS (WordPress/Shopify)   │    • Structured JSON Export                     │
+│   • CDN & Edge Servers        │    • Before/After Fix Verification Loop         │
+└───────────────────────────────┴─────────────────────────────────────────────────┘
+  </pre>
+</div>
+
+---
+
+## UI Preview
+
+<p align="center">
+  <img src="./assets/screenshot.png" alt="Mola Web Auditor Dashboard Preview" width="100%" />
+</p>
+
+---
+
+## Audit Assessment Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Developer / User
+    participant Web as Mola UI (Next.js)
+    participant API as /api/scan (Route Handler)
+    participant Guard as SSRF & URL Validator
+    participant Scanner as HTTP & Audit Engines
+    participant Target as Target Website
+    participant AI as AI Assistant / issues.md
+
+    Dev->>Web: Enter Website URL & Select Scan Mode
+    Web->>API: POST /api/scan { url, mode }
+    API->>Guard: Validate Scheme, DNS & Reject Private Subnets (SSRF)
+    alt Unsafe or Loopback Target
+        Guard-->>API: Reject 400 Bad Request
+        API-->>Web: Display Guardrail Error
+    else Safe Public Target
+        Guard-->>API: Normalized URL Approved
+        API->>Scanner: Initiate Controlled HTTP Request
+        Scanner->>Target: GET with Timeout & Max Payload Limits
+        Target-->>Scanner: Headers, Status, TLS & HTML Body
+        Scanner->>Scanner: Execute Security, Performance, SEO, a11y & Tech Engines
+        Scanner->>Scanner: Group Duplicates, Normalize & Sort by Priority
+        Scanner-->>API: Structured ScanResult
+        API-->>Web: 200 OK (Telemetry, Findings & Pass Checks)
+        Web->>Dev: Render Interactive Telemetry Report
+        Dev->>Web: Export issues.md / Copy Markdown
+        Dev->>AI: Feed issues.md to Gemini / Claude / Cursor
+        Dev->>Target: Deploy Code & Infrastructure Fixes
+        Dev->>Web: Click "Rescan" for Fix Verification
+        Web->>Dev: Highlight Resolved vs Remaining Findings
+    end
+```
+
+---
+
+## Core Audit Engines & Rules Matrix
+
+Mola runs checks across five primary disciplines plus technology and network infrastructure discovery:
+
+| Category | Checks & Rules | Detection Method | Severity |
+|---|---|---|---|
+| **Security** | Content-Security-Policy (CSP) | Analyzes `Content-Security-Policy` header presence and flags `'unsafe-inline'` / `'unsafe-eval'` | **HIGH** |
+| **Security** | Strict-Transport-Security (HSTS) | Verifies `Strict-Transport-Security` header with minimum 1-year max-age on HTTPS | **HIGH** |
+| **Security** | Clickjacking Defenses | Checks for `X-Frame-Options` or CSP `frame-ancestors` directives | **MEDIUM** |
+| **Security** | MIME-Type Sniffing Protection | Verifies `X-Content-Type-Options: nosniff` | **MEDIUM** |
+| **Security** | Insecure Mixed Content | Detects unencrypted `http://` scripts, stylesheets, and images on HTTPS hosts | **HIGH** |
+| **Security** | Version Banner Leakage | Flags exact daemon versions in `Server` or `X-Powered-By` headers | **LOW** |
+| **Performance** | TTFB Latency Benchmark | Measures Time-To-First-Byte against strict latency tiers (<300ms, 300–800ms, >800ms) | **HIGH / MED** |
+| **Performance** | HTTP Payload Compression | Checks for modern Brotli (`br`), Gzip (`gzip`), or Zstandard (`zstd`) compression | **MEDIUM** |
+| **Performance** | Render-Blocking Scripts | Detects synchronous `<script>` tags in `<head>` without `defer` or `async` | **MEDIUM** |
+| **Performance** | Explicit Image Dimensions | Flags images missing `width` and `height` attributes to prevent Cumulative Layout Shift (CLS) | **LOW** |
+| **SEO** | Document `<title>` Hygiene | Verifies `<title>` existence, minimum length (>15 chars), and maximum desktop limit (<70 chars) | **HIGH / LOW** |
+| **SEO** | Meta Description | Evaluates `<meta name="description">` presence and optimal character length (50–160 chars) | **MEDIUM** |
+| **SEO** | Canonical Link Declaration | Checks for `<link rel="canonical">` to prevent duplicate indexing penalties | **MEDIUM** |
+| **SEO** | Heading Hierarchy (H1) | Enforces single primary `<h1>` presence and validates logical heading nesting | **MEDIUM / LOW** |
+| **SEO** | OpenGraph & Social Metadata | Validates `og:title` and `og:image` tags for link preview generation | **LOW** |
+| **Accessibility** | Image `alt` Text Audit | Identifies images lacking descriptive `alt` attributes, providing element snippets | **HIGH** |
+| **Accessibility** | Root Language Definition | Verifies valid BCP 47 `lang` attribute on the root `<html>` element | **HIGH** |
+| **Accessibility** | Form Control Labeling | Detects input fields lacking associated `<label>`, `aria-label`, or accessible names | **MEDIUM** |
+| **Accessibility** | Semantic Landmarks | Confirms presence of `<main>`, `<header>`, and landmark containers | **LOW** |
+| **Best Practices** | Modern HTML5 DOCTYPE | Detects legacy quirks-mode triggers by verifying `<!DOCTYPE html>` | **MEDIUM** |
+| **Best Practices** | UTF-8 Character Encoding | Confirms explicit `<meta charset="utf-8">` declaration | **LOW** |
+| **Best Practices** | Obsolete Markup Scrutiny | Identifies deprecated tags (`<center>`, `<font>`, `<marquee>`, `<blink>`) | **LOW** |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js**: `v18.17.0` or later (tested on Node v20 & v24)
+- **npm**, **pnpm**, or **yarn**
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/mizan989/Mola-Web_Auditor.git
+cd Mola-Web_Auditor
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npm run dev
+```
+
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+### Production Build
+
+```bash
+# Compile optimized production bundle with TypeScript checks
+npm run build
+
+# Start the production server
+npm run start
+```
+
+---
+
+## 🛠️ Verification & AI Issue Artifact Workflow
+
+Mola is specifically designed to bridge the gap between audit discovery and resolution via modern AI coding assistants.
+
+### 1. Exporting `issues.md`
+
+Click **Export issues.md** on any completed audit to generate a self-contained markdown file structured for LLM ingestion:
+
+```markdown
+# Audit Issues & Recommendations — example.com
+
+> **Audit Metadata**
+> - Target: `https://example.com`
+> - Total Findings: 15 (High: 4, Medium: 5, Low: 6)
+
+## Prioritized Action Items
+
+### 1. [HIGH] Content-Security-Policy (CSP) Header Missing
+- **Category**: `security`
+- **Priority**: `CRITICAL`
+- **Affected Target**: `HTTP Response Headers`
+- **Why It Matters**: A robust CSP acts as a defense-in-depth shield against XSS...
+
+**Concrete Evidence:**
+```text
+response.headers["content-security-policy"] → undefined
+```
+
+**Recommended Fix:**
+Define a strict Content-Security-Policy header restricting script execution.
+```nginx
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none';" always;
+```
+```
+
+### 2. Handing to Your Coding Agent
+
+Provide `issues.md` directly to **Google Gemini**, **Claude**, **Cursor**, or **GitHub Copilot**:
+
+> *"Here is the `issues.md` report from Mola Web Auditor. Fix the critical security headers in our reverse proxy configuration and add missing image dimensions in our React templates."*
+
+### 3. The Fix-and-Verify Loop
+
+Once fixes are deployed:
+1. Re-run Mola against the target URL.
+2. Mola automatically compares the new results against the previous run.
+3. Review the **Fix Verification** banner:
+   - 🟢 **Resolved**: Previous findings that are now confirmed fixed.
+   - 🟡 **Remaining**: Findings that still require remediation.
+   - 🔴 **New Issues**: Any newly introduced regressions.
+
+---
+
+## 🛡️ Security Posture & SSRF Guardrails
+
+Auditing arbitrary URLs poses severe Server-Side Request Forgery (SSRF) risks. Mola implements hardened defense-in-depth controls defined in [`SECURITY.md`](SECURITY.md):
+
+1. **Protocol Whitelisting** — Only `http:` and `https:` schemes are permitted. Schemes such as `file:`, `ftp:`, `data:`, and `javascript:` are immediately rejected.
+2. **SSRF & Private IP Blocking** — All targets are validated prior to connection:
+   - RFC 1918 Private Ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+   - Loopback Interfaces (`127.0.0.1`, `localhost`, `::1`)
+   - Cloud Provider Metadata Endpoints (`169.254.169.254`, `metadata.google.internal`)
+   - Carrier-Grade NAT (`100.64.0.0/10`) & Multicast (`224.0.0.0/4`)
+   - Internal Domain Suffixes (`.local`, `.internal`, `.lan`, `.corp`, `.onion`)
+3. **DoS & Resource Quotas** — 12-second hard abort timeouts and 5MB response payload caps prevent memory exhaustion attacks.
+4. **Stateless Ephemeral Memory** — Mola does not maintain a database of scanned targets. Results reside only in volatile client/server memory.
+
+---
+
+## 📂 Repository Structure
+
+```text
+d:/PROJECTS/Mola/
+├── app/
+│   ├── api/
+│   │   └── scan/
+│   │       └── route.ts          # Secure scan API route handler
+│   ├── privacy/
+│   │   └── page.tsx              # Stateless privacy policy
+│   ├── terms/
+│   │   └── page.tsx              # Acceptable use terms
+│   ├── globals.css               # Design tokens & Tailwind CSS v4 setup
+│   ├── layout.tsx                # Root layout, metadata & brand navbar
+│   └── page.tsx                  # Interactive Auditor application UI
+├── assets/
+│   ├── logo.png                  # High-resolution brand mark (512x512)
+│   └── screenshot.png            # UI preview screenshot
+├── lib/
+│   ├── exportJson.ts             # JSON export & file download helpers
+│   └── exportMarkdown.ts         # issues.md Markdown generator
+├── public/
+│   ├── apple-touch-icon.png      # Apple touch icon (180x180)
+│   ├── favicon-32x32.png         # 32x32 Favicon
+│   ├── favicon.ico               # Multi-size Favicon (16/32/48)
+│   ├── icon-192.png              # PWA icon (192x192)
+│   ├── logo.png                  # Brand logo
+│   └── screenshot.png            # Static preview asset
+├── server/
+│   ├── orchestrator.ts           # Scan pipeline & verification comparator
+│   ├── scanners/
+│   │   ├── a11y.ts               # Accessibility (alt, lang, landmarks)
+│   │   ├── bestPractices.ts      # Doctype, UTF-8, deprecated markup
+│   │   ├── http.ts               # HTTP telemetry, headers, TLS, latency
+│   │   ├── performance.ts        # TTFB, compression, caching, scripts
+│   │   ├── security.ts           # CSP, HSTS, X-Frame, cookies, mixed content
+│   │   ├── seo.ts                # Title, meta description, canonical, h1-h6
+│   │   └── tech.ts               # Technology detection engine (Wappalyzer)
+│   └── validators/
+│       └── url.ts                # SSRF guardrails & IP allowlist validation
+├── types/
+│   └── audit.ts                  # Finding, Result & Verification schemas
+├── next.config.ts                # Next.js security headers configuration
+├── package.json                  # Dependencies & scripts
+├── postcss.config.mjs            # Tailwind CSS PostCSS plugin
+├── tsconfig.json                 # Strict TypeScript configuration
+└── README.md                     # Project overview & documentation
+```
+
+---
+
+## 📚 Architecture & Documentation Matrix
+
+| Document | Purpose |
+|---|---|
+| [`PRD.md`](prd.md) | Product Requirements Document, user personas, and feature specifications |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Detailed technical architecture, pipeline layers, and system constraints |
+| [`RULES.md`](rules.md) | Development standards, AI agent boundaries, and coding conventions |
+| [`SECURITY.md`](SECURITY.md) | Comprehensive threat model, SSRF defense architecture, and security policies |
+| [`DESIGN.md`](design.md) | Visual design system, canonical color tokens, and UI/UX philosophy |
+| [`README.md`](README.md) | Engineering overview, quickstart instructions, and capability matrix |
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+---
+
+## 👤 Author
+
+**Md Mizan**
+
+- GitHub: [@mizan989](https://github.com/mizan989)
+- Repository: [Mola-Web_Auditor](https://github.com/mizan989/Mola-Web_Auditor)
