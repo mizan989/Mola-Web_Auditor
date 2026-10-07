@@ -203,8 +203,8 @@ export default function AuditorPage() {
   return (
     <main className="w-full">
       {/* Hero Section */}
-      <section className="min-h-[calc(100vh-72px)] flex flex-col justify-center items-center px-6 py-16 sm:py-24 text-center">
-        <div className="w-full max-w-3xl mx-auto">
+      <section className="min-h-[calc(100dvh-72px)] flex flex-col justify-center items-center px-4 sm:px-6 py-6 sm:py-10 text-center">
+        <div className="w-full max-w-3xl mx-auto -translate-y-3 sm:-translate-y-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--border)] bg-white/40 text-[11px] font-extrabold uppercase tracking-widest text-[var(--muted)] mb-6 shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-[var(--text-primary)]" />
             <span>Open-Source Evidence-Based Web Auditing</span>
@@ -763,81 +763,99 @@ export default function AuditorPage() {
       )}
 
       {/* Workflow Section */}
-      <section id="workflow" className="w-full max-w-5xl mx-auto px-6 py-20 border-t border-[var(--border)]">
-        <div className="mb-12">
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--muted)] mb-2">Developer Workflow</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--dark)]">
-            From Detection to Verification
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm">
-            <span className="font-mono text-2xl font-black text-[var(--muted)]/50 block mb-4">01</span>
-            <h3 className="text-lg font-bold text-[var(--dark)] mb-2">Safe Discovery</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Target URLs undergo strict SSRF validation before running controlled HTTP and DOM inspection passes.
-            </p>
+      <section id="workflow" className="w-full min-h-[calc(100dvh-72px)] flex flex-col justify-center items-center px-4 sm:px-6 py-6 sm:py-10 border-t border-[var(--border)] scroll-mt-[72px]">
+        <div className="w-full max-w-5xl mx-auto">
+          <div className="mb-6 sm:mb-10 text-center sm:text-left">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--muted)] mb-1 sm:mb-2">Developer Workflow</p>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--dark)]">
+              From Detection to Verification
+            </h2>
           </div>
 
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm">
-            <span className="font-mono text-2xl font-black text-[var(--muted)]/50 block mb-4">02</span>
-            <h3 className="text-lg font-bold text-[var(--dark)] mb-2">Evidence-First</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Every finding includes reproducible observations, exact header values, affected tags, and why it matters.
-            </p>
-          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="p-3.5 sm:p-5 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-lg sm:text-2xl font-black text-[var(--muted)]/50 block mb-1.5 sm:mb-3">01</span>
+                <h3 className="text-xs sm:text-base font-bold text-[var(--dark)] mb-1 sm:mb-1.5">Safe Discovery</h3>
+                <p className="text-[10px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Target URLs undergo strict SSRF validation before running controlled HTTP and DOM inspection passes.
+                </p>
+              </div>
+            </div>
 
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm">
-            <span className="font-mono text-2xl font-black text-[var(--muted)]/50 block mb-4">03</span>
-            <h3 className="text-lg font-bold text-[var(--dark)] mb-2">AI-Ready Export</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Export an actionable <code className="text-[11px] font-bold">issues.md</code> artifact directly feedable to Gemini, Claude, or GitHub Issues.
-            </p>
-          </div>
+            <div className="p-3.5 sm:p-5 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-lg sm:text-2xl font-black text-[var(--muted)]/50 block mb-1.5 sm:mb-3">02</span>
+                <h3 className="text-xs sm:text-base font-bold text-[var(--dark)] mb-1 sm:mb-1.5">Evidence-First</h3>
+                <p className="text-[10px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Every finding includes reproducible observations, exact header values, affected tags, and why it matters.
+                </p>
+              </div>
+            </div>
 
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm">
-            <span className="font-mono text-2xl font-black text-[var(--muted)]/50 block mb-4">04</span>
-            <h3 className="text-lg font-bold text-[var(--dark)] mb-2">Fix Verification</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Deploy your fix and hit Rescan. Mola automatically highlights resolved vs remaining issues.
-            </p>
+            <div className="p-3.5 sm:p-5 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-lg sm:text-2xl font-black text-[var(--muted)]/50 block mb-1.5 sm:mb-3">03</span>
+                <h3 className="text-xs sm:text-base font-bold text-[var(--dark)] mb-1 sm:mb-1.5">AI-Ready Export</h3>
+                <p className="text-[10px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Export an actionable <code className="text-[9px] sm:text-[11px] font-bold">issues.md</code> artifact directly feedable to Gemini, Claude, or GitHub Issues.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl border border-[var(--border)] bg-white/30 backdrop-blur-sm flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-lg sm:text-2xl font-black text-[var(--muted)]/50 block mb-1.5 sm:mb-3">04</span>
+                <h3 className="text-xs sm:text-base font-bold text-[var(--dark)] mb-1 sm:mb-1.5">Fix Verification</h3>
+                <p className="text-[10px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Deploy your fix and hit Rescan. Mola automatically highlights resolved vs remaining issues.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Feature Capabilities Bento */}
-      <section id="features" className="w-full max-w-5xl mx-auto px-6 py-20 border-t border-[var(--border)]">
-        <div className="mb-12">
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--muted)] mb-2">Capabilities</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--dark)]">
-            Built for Developers Who Hate Fluff
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30">
-            <Shield className="w-6 h-6 text-[var(--dark)] mb-3" />
-            <h3 className="font-bold text-base text-[var(--dark)] mb-2">Zero Vanity Scores</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              No arbitrary 0–100 badges that provide false security. Clear, evidence-backed priorities sorted by impact.
-            </p>
+      <section id="features" className="w-full min-h-[calc(100dvh-72px)] flex flex-col justify-center items-center px-4 sm:px-6 py-6 sm:py-10 border-t border-[var(--border)] scroll-mt-[72px]">
+        <div className="w-full max-w-5xl mx-auto">
+          <div className="mb-6 sm:mb-10 text-center sm:text-left">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--muted)] mb-1 sm:mb-2">Capabilities</p>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--dark)]">
+              Built for Developers Who Hate Fluff
+            </h2>
           </div>
 
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30">
-            <Cpu className="w-6 h-6 text-[var(--dark)] mb-3" />
-            <h3 className="font-bold text-base text-[var(--dark)] mb-2">Technology Fingerprinting</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Instantly detects frameworks (Next.js, React, Nuxt), CDN edge hosts (Cloudflare, Vercel), and CMS software.
-            </p>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="p-4 sm:p-6 rounded-2xl border border-[var(--border)] bg-white/30 flex flex-col justify-between">
+              <div>
+                <Shield className="w-5 sm:w-6 h-5 sm:h-6 text-[var(--dark)] mb-2 sm:mb-3" />
+                <h3 className="font-bold text-sm sm:text-base text-[var(--dark)] mb-1 sm:mb-2">Zero Vanity Scores</h3>
+                <p className="text-[11px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  No arbitrary 0–100 badges that provide false security. Clear, evidence-backed priorities sorted by impact.
+                </p>
+              </div>
+            </div>
 
-          <div className="p-6 rounded-2xl border border-[var(--border)] bg-white/30">
-            <Code2 className="w-6 h-6 text-[var(--dark)] mb-3" />
-            <h3 className="font-bold text-base text-[var(--dark)] mb-2">Ready-To-Use Code Fixes</h3>
-            <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Each recommendation includes sample Nginx configs, CSP directives, and HTML snippets ready to copy into your repository.
-            </p>
+            <div className="p-4 sm:p-6 rounded-2xl border border-[var(--border)] bg-white/30 flex flex-col justify-between">
+              <div>
+                <Cpu className="w-5 sm:w-6 h-5 sm:h-6 text-[var(--dark)] mb-2 sm:mb-3" />
+                <h3 className="font-bold text-sm sm:text-base text-[var(--dark)] mb-1 sm:mb-2">Technology Fingerprinting</h3>
+                <p className="text-[11px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Instantly detects frameworks (Next.js, React, Nuxt), CDN edge hosts (Cloudflare, Vercel), and CMS software.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 rounded-2xl border border-[var(--border)] bg-white/30 flex flex-col justify-between">
+              <div>
+                <Code2 className="w-5 sm:w-6 h-5 sm:h-6 text-[var(--dark)] mb-2 sm:mb-3" />
+                <h3 className="font-bold text-sm sm:text-base text-[var(--dark)] mb-1 sm:mb-2">Ready-To-Use Code Fixes</h3>
+                <p className="text-[11px] sm:text-xs text-[var(--muted)] leading-relaxed">
+                  Each recommendation includes sample Nginx configs, CSP directives, and HTML snippets ready to copy into your repository.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
