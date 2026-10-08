@@ -126,17 +126,25 @@ export function validateAndSanitizeUrl(rawInput: string): UrlValidationResult {
   };
 }
 
+import type { DnsValidationOptions } from "./dns.ts";
+
+export type UrlValidationOptions = DnsValidationOptions;
+
 /**
  * Performs full validation including asynchronous DNS resolution and checking all resolved IP addresses.
  * Guarantees SSRF defense survives hostnames resolving to private addresses.
+ * Accepts optional bounded timeout and AbortSignal to integrate with operation deadlines.
  */
-export async function validateUrlAsync(rawInput: string): Promise<UrlValidationResult> {
+export async function validateUrlAsync(
+  rawInput: string,
+  options?: UrlValidationOptions
+): Promise<UrlValidationResult> {
   const syncResult = validateAndSanitizeUrl(rawInput);
   if (!syncResult.isValid || !syncResult.hostname) {
     return syncResult;
   }
 
-  const dnsResult = await resolveAndValidateDns(syncResult.hostname);
+  const dnsResult = await resolveAndValidateDns(syncResult.hostname, options);
   if (!dnsResult.isValid) {
     return {
       isValid: false,
@@ -151,4 +159,4 @@ export async function validateUrlAsync(rawInput: string): Promise<UrlValidationR
 }
 
 export { isPrivateOrReservedIp } from "./ip.ts";
-export { resolveAndValidateDns } from "./dns.ts";
+export { resolveAndValidateDns, setCustomDnsLookup, DEFAULT_DNS_TIMEOUT_MS } from "./dns.ts";

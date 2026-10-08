@@ -45,33 +45,47 @@ const severityOrder = {
  * Orchestrates a complete website audit with strict security validation and verifiable evidence.
  * Complies with SECURITY.md, PRD.md, and issues.md specifications.
  */
+export const OPERATION_DEADLINE_MS = 15000;
+
 export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult> {
   const startTime = Date.now();
   const scanMode = options.mode === "deep" ? "deep" : "quick";
 
-  // Step 1: Validate URL and enforce comprehensive SSRF controls (ISSUE-001, ISSUE-002, ISSUE-003)
-  const validation = await validateUrlAsync(options.url);
-  if (!validation.isValid || !validation.normalizedUrl) {
-    throw new Error(validation.error || "Invalid target URL.");
-  }
+  // Master operation deadline covering the entire lifecycle: validation, DNS, HTTP inspection, and modules
+  const masterController = new AbortController();
+  const deadlineTimeout = setTimeout(() => masterController.abort(), OPERATION_DEADLINE_MS);
 
-  const targetUrl = validation.normalizedUrl;
-  // Replace Math.random with crypto.randomUUID() (ISSUE-034)
-  const scanId = `mola-${crypto.randomUUID()}`;
+  try {
+    // Step 1: Validate URL and enforce comprehensive SSRF controls with DNS timeout integrated into the master operation deadline
+    const validation = await validateUrlAsync(options.url, {
+      signal: masterController.signal,
+      timeoutMs: 5000,
+    });
+    if (!validation.isValid || !validation.normalizedUrl) {
+      throw new Error(validation.error || "Invalid target URL.");
+    }
 
-  // Step 2: Controlled HTTP inspection with streaming limit and redirect tracking (ISSUE-010..014)
-  const httpResult = await performHttpInspection(targetUrl);
+    const targetUrl = validation.normalizedUrl;
+    // Replace Math.random with crypto.randomUUID() (ISSUE-034)
+    const scanId = `mola-${crypto.randomUUID()}`;
 
-  // Step 3: Construct authoritative shared AuditContext (Phase 2)
-  const context = buildAuditContext({
-    targetUrl,
-    finalUrl: httpResult.finalUrl,
-    scanMode,
-    scanId,
-    startTime,
-    httpResult,
-    validatedAddresses: validation.resolvedAddresses,
-  });
+    // Step 2: Controlled HTTP inspection with streaming limit and redirect tracking, integrated into master deadline
+    const remainingMs = Math.max(1000, OPERATION_DEADLINE_MS - (Date.now() - startTime));
+    const httpResult = await performHttpInspection(targetUrl, {
+      signal: masterController.signal,
+      timeoutMs: remainingMs,
+    });
+
+    // Step 3: Construct authoritative shared AuditContext (Phase 2)
+    const context = buildAuditContext({
+      targetUrl,
+      finalUrl: httpResult.finalUrl,
+      scanMode,
+      scanId,
+      startTime,
+      httpResult,
+      validatedAddresses: validation.resolvedAddresses,
+    });
 
   // Step 4: Run core audit engines consuming the shared AuditContext
   const security = auditSecurity(context);
@@ -250,6 +264,9 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       browserExecution
     ),
   };
+  } finally {
+    clearTimeout(deadlineTimeout);
+  }
 }
 
 export { compareAuditResults } from "../lib/compare.ts";

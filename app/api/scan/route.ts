@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWebsiteAudit } from "@/server/orchestrator";
+import { extractClientIp } from "@/server/security/clientIp";
 
 // Concurrency limiter state (ISSUE-006)
 const MAX_CONCURRENT_SCANS = 5;
@@ -59,11 +60,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Client IP Rate Limiting (ISSUE-005)
-  const clientIp =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "127.0.0.1";
+  // 2. Client IP Rate Limiting (ISSUE-005, Phase 13)
+  const clientIp = extractClientIp(req.headers);
 
   if (!checkRateLimit(clientIp)) {
     return NextResponse.json(
@@ -143,12 +141,17 @@ export async function POST(req: NextRequest) {
     if (
       rawMessage.includes("prohibited") ||
       rawMessage.includes("reserved") ||
-      rawMessage.includes("private") ||
+      rawMessage.includes("private or reserved") ||
+      rawMessage.includes("private IP") ||
+      rawMessage.includes("private address") ||
       rawMessage.includes("Invalid URL") ||
       rawMessage.includes("Protocol") ||
       rawMessage.includes("Port") ||
       rawMessage.includes("credentials") ||
-      rawMessage.includes("top-level domain")
+      rawMessage.includes("top-level domain") ||
+      rawMessage.includes("rebinding") ||
+      rawMessage.includes("DNS rebinding") ||
+      rawMessage.includes("SSRF validation failed")
     ) {
       sanitizedMessage = rawMessage;
       statusCode = 400;
