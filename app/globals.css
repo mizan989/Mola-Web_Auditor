@@ -21,22 +21,6 @@
   --error-bg: rgba(138, 61, 61, 0.12);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-light: var(--surface-light);
-  --color-muted: var(--muted);
-  --color-text-primary: var(--text-primary);
-  --color-dark: var(--dark);
-  --color-deep: var(--deep);
-  --color-white: var(--white);
-  --color-border: var(--border);
-
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-error: var(--error);
-}
-
 /* Self-Hosted Local Fonts (Zero External Internet Requests) */
 @font-face {
   font-family: 'Inter';
