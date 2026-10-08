@@ -55,6 +55,7 @@ export interface Finding {
   instancesCount?: number;
   instances?: string[];
   limitations?: string;
+  correlationKey?: string;
 }
 
 export interface PassedCheck {

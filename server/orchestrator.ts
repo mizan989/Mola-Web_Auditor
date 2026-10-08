@@ -19,6 +19,7 @@ import { auditBestPractices } from "./scanners/bestPractices.ts";
 import { auditDeepScan } from "./scanners/deep.ts";
 import { normalizeTraceableFinding } from "./evidenceEngine.ts";
 import { enforceEvidenceQuality } from "./evidenceQuality.ts";
+import { deduplicateFindings } from "./deduplication.ts";
 
 export interface ScanOptions {
   url: string;
@@ -139,14 +140,17 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     .map((f) => normalizeTraceableFinding(f, context.finalUrl))
     .map(enforceEvidenceQuality);
 
-  // Step 7: Sort findings deterministically by Severity then Priority
-  traceableFindings.sort((a, b) => {
+  // Step 7: Deterministic Semantic Correlation & Deduplication (Phase 9)
+  const deduplicatedFindings: Finding[] = deduplicateFindings(traceableFindings);
+
+  // Step 8: Sort findings deterministically by Severity then Priority
+  deduplicatedFindings.sort((a, b) => {
     const sevDiff = severityOrder[b.severity] - severityOrder[a.severity];
     if (sevDiff !== 0) return sevDiff;
     return priorityOrder[b.priority] - priorityOrder[a.priority];
   });
 
-  // Step 7: Calculate summary metrics
+  // Step 9: Calculate summary metrics
   const categoryCounts: Record<FindingCategory, number> = {
     security: 0,
     performance: 0,
@@ -174,7 +178,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   let mediumCount = 0;
   let lowCount = 0;
 
-  for (const f of traceableFindings) {
+  for (const f of deduplicatedFindings) {
     categoryCounts[f.category] = (categoryCounts[f.category] || 0) + 1;
     if (f.severity === "high") highCount++;
     else if (f.severity === "medium") mediumCount++;
@@ -204,7 +208,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     status,
     completeness,
     summary: {
-      totalFindings: traceableFindings.length,
+      totalFindings: deduplicatedFindings.length,
       highCount,
       mediumCount,
       lowCount,
@@ -213,7 +217,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       stateCounts,
       confidenceCounts,
     },
-    findings: traceableFindings,
+    findings: deduplicatedFindings,
     passedChecks: allPassed,
     technologies,
     httpInfo: httpResult.info,
