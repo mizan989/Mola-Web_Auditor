@@ -10,11 +10,11 @@ import type {
 } from "../types/audit.ts";
 import { validateUrlAsync } from "./validators/url.ts";
 import { performHttpInspection } from "./scanners/http.ts";
+import { buildAuditContext } from "./context.ts";
 import { auditSecurity } from "./scanners/security.ts";
 import { auditPerformance } from "./scanners/performance.ts";
 import { auditSeo } from "./scanners/seo.ts";
 import { auditAccessibility } from "./scanners/a11y.ts";
-import { detectTechnologies } from "./scanners/tech.ts";
 import { auditBestPractices } from "./scanners/bestPractices.ts";
 import { auditDeepScan } from "./scanners/deep.ts";
 
@@ -51,32 +51,41 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   }
 
   const targetUrl = validation.normalizedUrl;
-  const hostname = new URL(targetUrl).hostname;
   // Replace Math.random with crypto.randomUUID() (ISSUE-034)
   const scanId = `mola-${crypto.randomUUID()}`;
 
   // Step 2: Controlled HTTP inspection with streaming limit and redirect tracking (ISSUE-010..014)
   const httpResult = await performHttpInspection(targetUrl);
-  const { info, htmlText, finalUrl, rawHeaders, isTruncated } = httpResult;
 
-  // Step 3: Run core audit engines
-  const security = auditSecurity(rawHeaders, finalUrl, htmlText);
-  const performance = auditPerformance(info.responseTimeMs, info.contentLength, rawHeaders, htmlText);
-  const seo = auditSeo(htmlText);
-  const accessibility = auditAccessibility(htmlText);
-  const bestPractices = auditBestPractices(htmlText);
-  const technologies = detectTechnologies(rawHeaders, htmlText);
+  // Step 3: Construct authoritative shared AuditContext (Phase 2)
+  const context = buildAuditContext({
+    targetUrl,
+    finalUrl: httpResult.finalUrl,
+    scanMode,
+    scanId,
+    startTime,
+    httpResult,
+    validatedAddresses: validation.resolvedAddresses,
+  });
 
-  // Step 4: Run Deep Scan engine if requested (ISSUE-009, ISSUE-023)
+  // Step 4: Run core audit engines consuming the shared AuditContext
+  const security = auditSecurity(context);
+  const performance = auditPerformance(context);
+  const seo = auditSeo(context);
+  const accessibility = auditAccessibility(context);
+  const bestPractices = auditBestPractices(context);
+  const technologies = context.technologyObservations;
+
+  // Step 5: Run Deep Scan engine if requested (ISSUE-009, ISSUE-023)
   let deepFindings: Finding[] = [];
   let deepPassed: PassedCheck[] = [];
   if (scanMode === "deep") {
-    const deepResult = auditDeepScan(rawHeaders, finalUrl, htmlText);
+    const deepResult = auditDeepScan(context);
     deepFindings = deepResult.findings;
     deepPassed = deepResult.passedChecks;
   }
 
-  // Step 5: Aggregate findings
+  // Step 6: Aggregate findings
   const allFindings: Finding[] = [
     ...security.findings,
     ...performance.findings,
@@ -86,7 +95,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     ...deepFindings,
   ];
 
-  if (isTruncated) {
+  if (context.body.isTruncated) {
     allFindings.push({
       id: "perf-payload-truncated",
       category: "performance",
@@ -101,7 +110,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       evidence: `Body stream reached maximum size limit (2.5 MB); parsing terminated safely`,
       structuredEvidence: {
         id: "ev-perf-payload-truncated",
-        sourceUrl: finalUrl,
+        sourceUrl: context.finalUrl,
         affectedTarget: "HTTP Response Body",
         observation: "Body stream reached maximum size limit (2.5 MB); parsing terminated safely.",
         expectedCondition: "HTML payload within bounded stream inspection limit (<= 2.5 MB)",
@@ -173,14 +182,15 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   }
 
   const scanDurationMs = Date.now() - startTime;
+  const isTruncated = context.body.isTruncated;
   const completeness = isTruncated ? "partial" : "full";
   const status = isTruncated ? "partial" : "completed";
 
   return {
     scanId,
     targetUrl,
-    finalUrl,
-    hostname,
+    finalUrl: context.finalUrl,
+    hostname: context.hostname,
     scanTimestamp: new Date().toISOString(),
     scanDurationMs,
     scanMode,
@@ -199,7 +209,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     findings: allFindings,
     passedChecks: allPassed,
     technologies,
-    httpInfo: info,
+    httpInfo: httpResult.info,
     performanceMetrics: performance.metrics,
     seoData: seo.seoData,
     accessibilitySummary: accessibility.summary,
@@ -207,3 +217,4 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
 }
 
 export { compareAuditResults } from "../lib/compare.ts";
+export { buildAuditContext, createPartialAuditContext, isAuditContext } from "./context.ts";

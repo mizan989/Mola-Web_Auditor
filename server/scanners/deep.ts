@@ -1,4 +1,5 @@
-import type { Finding, PassedCheck } from "../../types/audit.ts";
+import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface DeepScanResult {
   findings: Finding[];
@@ -7,13 +8,19 @@ export interface DeepScanResult {
 
 /**
  * Performs deep resource, third-party script, and subresource security inspection.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to direct parameters.
  * Executed exclusively during Deep Scan mode (Complies with ISSUE-009, ISSUE-022, ISSUE-023).
  */
 export function auditDeepScan(
-  headers: Record<string, string>,
-  finalUrl: string,
-  htmlText: string
+  contextOrHeaders: AuditContext | Record<string, string>,
+  legacyFinalUrl?: string,
+  legacyHtmlText?: string
 ): DeepScanResult {
+  const isCtx = isAuditContext(contextOrHeaders);
+  const headers = isCtx ? contextOrHeaders.headers : (contextOrHeaders as Record<string, string>);
+  const finalUrl = isCtx ? contextOrHeaders.finalUrl : (legacyFinalUrl || "");
+  const htmlText = isCtx ? contextOrHeaders.body.text : (legacyHtmlText || "");
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 

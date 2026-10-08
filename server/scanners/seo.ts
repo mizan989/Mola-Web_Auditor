@@ -1,4 +1,5 @@
-import type { Finding, PassedCheck, SeoInspection } from "../../types/audit.ts";
+import type { AuditContext, Finding, PassedCheck, SeoInspection } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface SeoAuditResult {
   seoData: SeoInspection;
@@ -15,9 +16,13 @@ function cleanText(raw: string): string {
 
 /**
  * Audits technical search engine optimization (SEO) factors.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to raw HTML string.
  * Complies with ISSUE-017 (concrete document-structure analysis and attached evidence).
  */
-export function auditSeo(htmlText: string): SeoAuditResult {
+export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
+  const isCtx = isAuditContext(contextOrHtml);
+  const htmlText = isCtx ? contextOrHtml.body.text : (contextOrHtml as string);
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 

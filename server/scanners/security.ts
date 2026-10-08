@@ -1,4 +1,5 @@
-import type { Finding, PassedCheck } from "../../types/audit.ts";
+import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface SecurityAuditResult {
   findings: Finding[];
@@ -7,16 +8,51 @@ export interface SecurityAuditResult {
 
 /**
  * Audits HTTP response security headers and document-level security posture.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to direct parameters.
  * Complies with ISSUE-018 (clear separation of headers vs document checks)
  * and ISSUE-019 (precise subresource mixed content verification on HTTPS pages).
  */
 export function auditSecurity(
-  headers: Record<string, string>,
-  finalUrl: string,
-  htmlText: string
+  contextOrHeaders: AuditContext | Record<string, string>,
+  legacyFinalUrl?: string,
+  legacyHtmlText?: string
 ): SecurityAuditResult {
+  const isCtx = isAuditContext(contextOrHeaders);
+  const headers = isCtx ? contextOrHeaders.headers : (contextOrHeaders as Record<string, string>);
+  const finalUrl = isCtx ? contextOrHeaders.finalUrl : (legacyFinalUrl || "");
+  const htmlText = isCtx ? contextOrHeaders.body.text : (legacyHtmlText || "");
+  const context = isCtx ? contextOrHeaders : undefined;
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
+
+  // If the context is marked failed/partial with zero status, report unable_to_check
+  if (context?.metadata?.isPartial && context.response.statusCode === 0) {
+    findings.push({
+      id: "sec-connection-failed",
+      category: "security",
+      severity: "high",
+      priority: "critical",
+      state: "unable_to_check",
+      confidence: "high",
+      title: "Security Posture Incomplete Due to Connection Failure",
+      description: context.metadata.failureReason || "Could not establish HTTP connection to evaluate security posture.",
+      whyItMatters: "Security headers and document controls cannot be audited without a successful HTTP response.",
+      evidence: `Connection failed: ${context.metadata.failureReason || "Unknown network error"}`,
+      structuredEvidence: {
+        id: "ev-sec-connection-failed",
+        sourceUrl: finalUrl,
+        observation: `Failed to connect: ${context.metadata.failureReason || "Network error"}`,
+        expectedCondition: "Successful HTTP response received",
+        evidenceType: "network-failure",
+        limitations: "Audit halted prematurely; remote host was unreachable.",
+      },
+      affectedTarget: finalUrl,
+      recommendation: "Ensure the target website is online, publicly resolvable, and accepting HTTP requests.",
+      limitations: "Audit halted prematurely; remote host was unreachable.",
+    });
+    return { findings, passedChecks };
+  }
 
   const isHttps = finalUrl.startsWith("https://");
 

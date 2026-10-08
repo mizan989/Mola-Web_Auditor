@@ -1,14 +1,28 @@
-import type { DetectedTechnology } from "../../types/audit.ts";
+import type { AuditContext, DetectedTechnology } from "../../types/audit.ts";
 
 /**
  * Detects website technologies using verifiable, evidence-based heuristics.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to (headers, htmlText).
  * Fixed according to ISSUE-015 & ISSUE-016 (no loose substring false-positives;
  * Tailwind CSS requires verified stylesheet/CDN reference or distinctive class clusters).
  */
 export function detectTechnologies(
-  headers: Record<string, string>,
-  htmlText: string
+  contextOrHeaders: AuditContext | Record<string, string>,
+  legacyHtmlText?: string
 ): DetectedTechnology[] {
+  const isCtx = Boolean(
+    contextOrHeaders &&
+      typeof contextOrHeaders === "object" &&
+      "body" in contextOrHeaders &&
+      "headers" in contextOrHeaders
+  );
+  const headers = isCtx
+    ? (contextOrHeaders as AuditContext).headers
+    : (contextOrHeaders as Record<string, string>);
+  const htmlText = isCtx
+    ? (contextOrHeaders as AuditContext).body.text
+    : legacyHtmlText || "";
+
   const techs: DetectedTechnology[] = [];
   const lowerHtml = htmlText.toLowerCase();
 

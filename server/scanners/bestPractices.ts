@@ -1,11 +1,15 @@
-import type { Finding, PassedCheck } from "../../types/audit.ts";
+import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface BestPracticesAuditResult {
   findings: Finding[];
   passedChecks: PassedCheck[];
 }
 
-export function auditBestPractices(htmlText: string): BestPracticesAuditResult {
+export function auditBestPractices(contextOrHtml: AuditContext | string): BestPracticesAuditResult {
+  const isCtx = isAuditContext(contextOrHtml);
+  const htmlText = isCtx ? contextOrHtml.body.text : (contextOrHtml as string);
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 

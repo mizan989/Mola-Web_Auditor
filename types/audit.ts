@@ -156,3 +156,53 @@ export interface VerificationComparison {
   totalPrevious: number;
   totalCurrent: number;
 }
+
+export interface BoundedHttpResponse {
+  statusCode: number;
+  statusText: string;
+  protocol: string;
+  isHttps: boolean;
+  responseTimeMs: number;
+  contentLength: number;
+  contentType: string;
+}
+
+export interface DiscoveredResources {
+  scripts: string[];
+  stylesheets: string[];
+  images: string[];
+  iframes: string[];
+}
+
+export interface AuditContextMetadata {
+  scanId: string;
+  userAgent: string;
+  timestamp: string;
+  isPartial?: boolean;
+  failureReason?: string;
+  validatedAddresses?: string[];
+}
+
+export interface AuditContext {
+  targetUrl: string;
+  finalUrl: string;
+  hostname: string;
+  scanMode: "quick" | "deep";
+  redirectChain: string[];
+  response: BoundedHttpResponse;
+  headers: Record<string, string>;
+  body: {
+    text: string;
+    byteLength: number;
+    isTruncated: boolean;
+  };
+  timing: {
+    startTime: number;
+    ttfbMs: number;
+    durationMs?: number;
+  };
+  discoveredResources: DiscoveredResources;
+  technologyObservations: DetectedTechnology[];
+  limitations: string[];
+  metadata: AuditContextMetadata;
+}

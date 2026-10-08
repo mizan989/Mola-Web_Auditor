@@ -1,4 +1,5 @@
-import type { Finding, PassedCheck, PerformanceMetrics } from "../../types/audit.ts";
+import type { AuditContext, Finding, PassedCheck, PerformanceMetrics } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface PerformanceAuditResult {
   metrics: PerformanceMetrics;
@@ -7,11 +8,18 @@ export interface PerformanceAuditResult {
 }
 
 export function auditPerformance(
-  responseTimeMs: number,
-  contentLength: number,
-  headers: Record<string, string>,
-  htmlText: string
+  contextOrResponseTime: AuditContext | number,
+  legacyContentLength?: number,
+  legacyHeaders?: Record<string, string>,
+  legacyHtmlText?: string
 ): PerformanceAuditResult {
+  const isCtx = isAuditContext(contextOrResponseTime);
+  const responseTimeMs = isCtx ? contextOrResponseTime.timing.ttfbMs : (contextOrResponseTime as number);
+  const contentLength = isCtx ? contextOrResponseTime.response.contentLength : (legacyContentLength || 0);
+  const headers = isCtx ? contextOrResponseTime.headers : (legacyHeaders || {});
+  const htmlText = isCtx ? contextOrResponseTime.body.text : (legacyHtmlText || "");
+  const context = isCtx ? contextOrResponseTime : undefined;
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 
@@ -19,10 +27,16 @@ export function auditPerformance(
   const cacheControl = headers["cache-control"] || null;
   const payloadKb = Math.round((contentLength / 1024) * 10) / 10;
 
-  // Extract scripts, styles, images
-  const scripts = htmlText.match(/<script\b[^>]*>/gi) || [];
-  const stylesheets = htmlText.match(/<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi) || [];
-  const images = htmlText.match(/<img\b[^>]*>/gi) || [];
+  // Extract scripts, styles, images (or leverage context.discoveredResources if available)
+  const scripts = context?.discoveredResources
+    ? context.discoveredResources.scripts
+    : htmlText.match(/<script\b[^>]*>/gi) || [];
+  const stylesheets = context?.discoveredResources
+    ? context.discoveredResources.stylesheets
+    : htmlText.match(/<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi) || [];
+  const images = context?.discoveredResources
+    ? context.discoveredResources.images
+    : htmlText.match(/<img\b[^>]*>/gi) || [];
 
   const metrics: PerformanceMetrics = {
     ttfbMs: responseTimeMs,

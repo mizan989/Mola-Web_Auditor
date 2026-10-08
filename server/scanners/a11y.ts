@@ -1,4 +1,5 @@
-import type { AccessibilityInspection, Finding, PassedCheck } from "../../types/audit.ts";
+import type { AccessibilityInspection, AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
+import { isAuditContext } from "../context.ts";
 
 export interface A11yAuditResult {
   summary: AccessibilityInspection;
@@ -8,10 +9,14 @@ export interface A11yAuditResult {
 
 /**
  * Audits accessibility compliance according to WCAG 2.1 AA baselines.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to raw HTML string.
  * Fixed according to ISSUE-020 & ISSUE-021 (strictly verifies accessible names for inputs;
  * an input with only an `id` is properly recognized as unlabelled).
  */
-export function auditAccessibility(htmlText: string): A11yAuditResult {
+export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAuditResult {
+  const isCtx = isAuditContext(contextOrHtml);
+  const htmlText = isCtx ? contextOrHtml.body.text : (contextOrHtml as string);
+
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 
