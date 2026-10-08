@@ -101,8 +101,34 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     md += `\n`;
   }
 
-  // Audit Scope & Limitations (Phase 10 & Phase 12)
-  if (result.limitations && result.limitations.length > 0) {
+  // Audit Scope, Coverage & Limitations (Phase 10 & Phase 12)
+  if (result.coverage) {
+    const cov = result.coverage;
+    md += `## Audit Scope & Check Coverage\n\n`;
+    md += `| Coverage Dimension | Count | Details |\n`;
+    md += `|---|---|---|\n`;
+    md += `| **Scan Mode** | \`${cov.scanMode.toUpperCase()}\` | ${cov.scanMode === "deep" ? "Full static, DOM, SRI, and browser-assisted inspection" : "Fast static HTTP, header, and DOM inspection"} |\n`;
+    md += `| **Checks Attempted** | **${cov.attemptedChecks}** | Total rules evaluated within scan scope |\n`;
+    md += `| **Checks Completed** | **${cov.completedChecks}** | Conclusive outcomes (passing checks + confirmed issues) |\n`;
+    md += `| **Unable to Check** | **${cov.unableToCheckCount}** | Checks skipped or bounded by runtime/network limits |\n`;
+    md += `| **Failed Checks** | **${cov.failedChecksCount}** | Internal scanner execution exceptions |\n\n`;
+
+    if (cov.limitations.length > 0) {
+      md += `### Active Audit Limitations\n\n`;
+      for (const lim of cov.limitations) {
+        md += `- ℹ️ ${lim}\n`;
+      }
+      md += `\n`;
+    }
+
+    if (cov.unverifiedChecks && cov.unverifiedChecks.length > 0) {
+      md += `### Checks Unable to Run (Not Evaluated)\n\n`;
+      for (const unv of cov.unverifiedChecks) {
+        md += `- ⚠️ ${unv}\n`;
+      }
+      md += `\n`;
+    }
+  } else if (result.limitations && result.limitations.length > 0) {
     md += `## Audit Scope & Limitations\n\n`;
     for (const lim of result.limitations) {
       md += `- ℹ️ ${lim}\n`;

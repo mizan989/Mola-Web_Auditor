@@ -21,6 +21,7 @@ import { normalizeTraceableFinding } from "./evidenceEngine.ts";
 import { enforceEvidenceQuality } from "./evidenceQuality.ts";
 import { deduplicateFindings } from "./deduplication.ts";
 import { executeIsolatedBrowserScan } from "./browser.ts";
+import { calculateAuditCoverage } from "./coverage.ts";
 
 export interface ScanOptions {
   url: string;
@@ -242,9 +243,16 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     reconnaissance: context.recon,
     limitations: context.limitations.length > 0 ? [...context.limitations] : undefined,
     browserExecution,
+    coverage: calculateAuditCoverage(
+      context,
+      deduplicatedFindings,
+      allPassed,
+      browserExecution
+    ),
   };
 }
 
 export { compareAuditResults } from "../lib/compare.ts";
 export { buildAuditContext, createPartialAuditContext, isAuditContext } from "./context.ts";
 export { collectReconnaissance, extractDiscoveredResources } from "./recon.ts";
+export { calculateAuditCoverage } from "./coverage.ts";

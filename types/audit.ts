@@ -154,6 +154,27 @@ export interface ScanResult {
   reconnaissance?: ReconnaissanceMap;
   limitations?: string[];
   browserExecution?: BrowserExecutionResult;
+  coverage?: AuditCoverageSummary;
+}
+
+export interface CategoryCoverage {
+  category: FindingCategory;
+  attempted: number;
+  completed: number;
+  unableToCheck: number;
+  failed: number;
+  limitations: string[];
+}
+
+export interface AuditCoverageSummary {
+  scanMode: "quick" | "deep";
+  attemptedChecks: number;
+  completedChecks: number;
+  unableToCheckCount: number;
+  failedChecksCount: number;
+  limitations: string[];
+  categoryBreakdown: Record<FindingCategory, CategoryCoverage>;
+  unverifiedChecks?: string[];
 }
 
 export type VerificationStatus =

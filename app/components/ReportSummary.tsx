@@ -118,6 +118,43 @@ export function ReportSummary({ result, isScanning, onRescan }: ReportSummaryPro
         </div>
       </div>
 
+      {/* 2.5 Audit Coverage & Scope Indicator (Phase 12) */}
+      {result.coverage && (
+        <div className="mb-6 p-4 rounded-2xl bg-white/40 border border-[var(--border)] text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-[var(--border)]">
+            <span className="font-extrabold uppercase tracking-wider text-[var(--muted)] text-[11px]">
+              Audit Scope & Check Coverage
+            </span>
+            <span className="font-mono text-[var(--muted)] text-[11px]">
+              {result.coverage.completedChecks} / {result.coverage.attemptedChecks} checks evaluated
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--text-primary)]">
+            <span>✅ <strong>{result.coverage.completedChecks}</strong> Completed</span>
+            {result.coverage.unableToCheckCount > 0 && (
+              <span className="text-[var(--warning)] font-semibold">
+                ⚠️ <strong>{result.coverage.unableToCheckCount}</strong> Unable to Check
+              </span>
+            )}
+            {result.coverage.failedChecksCount > 0 && (
+              <span className="text-[var(--error)] font-semibold">
+                ❌ <strong>{result.coverage.failedChecksCount}</strong> Failed
+              </span>
+            )}
+          </div>
+          {result.coverage.limitations.length > 0 && (
+            <div className="mt-2.5 pt-2 border-t border-[var(--border)] text-[11px] text-[var(--muted)] space-y-0.5">
+              {result.coverage.limitations.map((lim, i) => (
+                <div key={i} className="flex items-start gap-1.5">
+                  <span className="text-[var(--warning)]">ℹ️</span>
+                  <span>{lim}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 3. Detected Technologies */}
       {result.technologies.length > 0 && (
         <div className="p-4 sm:p-5 rounded-2xl bg-white/40 border border-[var(--border)]">
