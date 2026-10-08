@@ -228,11 +228,17 @@ export function generateVerificationMarkdown(comparison: VerificationComparison)
   md += `- Previous Scan: ${comparison.previousScanTimestamp}\n`;
   md += `- Current Scan: ${comparison.newScanTimestamp}\n\n`;
 
+  const unableCount = comparison.unableToVerifyFindings?.length || 0;
+
   md += `## Summary\n`;
   md += `- 🟢 Resolved (Fixed): **${comparison.resolvedFindings.length}**\n`;
   md += `- 🟡 Still Present: **${comparison.remainingFindings.length}**\n`;
   md += `- 🔵 Changed Status: **${comparison.changedFindings.length}**\n`;
-  md += `- 🔴 New Issues Detected: **${comparison.newFindings.length}**\n\n`;
+  md += `- 🔴 New Issues Detected: **${comparison.newFindings.length}**\n`;
+  if (unableCount > 0) {
+    md += `- ⚪ Unable to Verify: **${unableCount}**\n`;
+  }
+  md += `\n`;
 
   if (comparison.resolvedFindings.length > 0) {
     md += `### 🟢 Resolved Issues (Fixed)\n`;
@@ -253,7 +259,24 @@ export function generateVerificationMarkdown(comparison: VerificationComparison)
   if (comparison.changedFindings.length > 0) {
     md += `### 🔵 Changed Status\n`;
     for (const f of comparison.changedFindings) {
-      md += `- [ ] **[${f.severity.toUpperCase()}]** ${f.title} *(Severity/details updated)*\n`;
+      const diff = comparison.diffs?.find((d) => d.findingId === f.id);
+      let changeNote = "Severity/details updated";
+      if (diff?.changes) {
+        const notes: string[] = [];
+        if (diff.changes.severity) {
+          notes.push(`Severity: ${diff.changes.severity.from} → ${diff.changes.severity.to}`);
+        }
+        if (diff.changes.priority) {
+          notes.push(`Priority: ${diff.changes.priority.from} → ${diff.changes.priority.to}`);
+        }
+        if (diff.changes.materialDetails) {
+          notes.push(diff.changes.materialDetails);
+        }
+        if (notes.length > 0) {
+          changeNote = notes.join("; ");
+        }
+      }
+      md += `- [ ] **[${f.severity.toUpperCase()}]** ${f.title} *(${changeNote})*\n`;
     }
     md += `\n`;
   }
@@ -262,6 +285,16 @@ export function generateVerificationMarkdown(comparison: VerificationComparison)
     md += `### 🔴 New Issues Detected\n`;
     for (const f of comparison.newFindings) {
       md += `- [ ] **[${f.severity.toUpperCase()}]** ${f.title}\n`;
+    }
+    md += `\n`;
+  }
+
+  if (comparison.unableToVerifyFindings && comparison.unableToVerifyFindings.length > 0) {
+    md += `### ⚪ Unable to Verify\n`;
+    for (const f of comparison.unableToVerifyFindings) {
+      const diff = comparison.diffs?.find((d) => d.findingId === f.id);
+      const reasonStr = diff?.reason ? ` *(${diff.reason})*` : "";
+      md += `- [?] **[${f.severity.toUpperCase()}]** ${f.title}${reasonStr}\n`;
     }
     md += `\n`;
   }

@@ -156,6 +156,35 @@ export interface ScanResult {
   browserExecution?: BrowserExecutionResult;
 }
 
+export type VerificationStatus =
+  | "fixed"
+  | "still_present"
+  | "changed"
+  | "new"
+  | "unable_to_verify";
+
+export interface VerificationFindingDiff {
+  findingId: string;
+  category: FindingCategory;
+  title: string;
+  status: VerificationStatus;
+  affectedTarget: string;
+  previousFinding?: Finding;
+  currentFinding?: Finding;
+  changes?: {
+    severity?: { from: FindingSeverity; to: FindingSeverity };
+    priority?: { from: FindingPriority; to: FindingPriority };
+    state?: { from?: FindingState; to?: FindingState };
+    confidence?: { from?: FindingConfidence; to?: FindingConfidence };
+    affectedTarget?: { from: string; to: string };
+    evidence?: { from?: string; to?: string };
+    recommendation?: { from?: string; to?: string };
+    instancesCount?: { from?: number; to?: number };
+    materialDetails?: string;
+  };
+  reason?: string;
+}
+
 export interface VerificationComparison {
   previousScanTimestamp: string;
   newScanTimestamp: string;
@@ -164,8 +193,17 @@ export interface VerificationComparison {
   remainingFindings: Finding[];
   changedFindings: Finding[];
   newFindings: Finding[];
+  unableToVerifyFindings?: Finding[];
+  diffs?: VerificationFindingDiff[];
   totalPrevious: number;
   totalCurrent: number;
+  summary?: {
+    fixed: number;
+    stillPresent: number;
+    changed: number;
+    new: number;
+    unableToVerify: number;
+  };
 }
 
 export interface BoundedHttpResponse {

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, HelpCircle } from "lucide-react";
 import { VerificationComparison } from "@/types/audit";
 
 interface VerificationSectionProps {
@@ -9,11 +9,12 @@ interface VerificationSectionProps {
 }
 
 /**
- * Fix Verification component conforming to ISSUE-025 and ISSUE-050.
- * Clearly segregates and presents Fixed, Still Present, Changed, and New findings.
+ * Fix Verification component conforming to ISSUE-025, ISSUE-050, and Phase 11.
+ * Clearly segregates and presents Fixed, Still Present, Changed, New, and Unable to Verify findings.
  */
 export function VerificationSection({ comparison }: VerificationSectionProps) {
   const prevTime = new Date(comparison.previousScanTimestamp).toLocaleTimeString();
+  const unableCount = comparison.unableToVerifyFindings?.length || 0;
 
   return (
     <section
@@ -35,7 +36,13 @@ export function VerificationSection({ comparison }: VerificationSectionProps) {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-6">
+      <div
+        className={`grid ${
+          unableCount > 0
+            ? "grid-cols-2 sm:grid-cols-5"
+            : "grid-cols-2 sm:grid-cols-4"
+        } gap-3 text-center mb-6`}
+      >
         <div className="p-3.5 rounded-xl bg-white/60 border border-[var(--border)] shadow-2xs">
           <div className="text-2xl sm:text-3xl font-black text-[var(--success)]">
             {comparison.resolvedFindings.length}
@@ -71,6 +78,17 @@ export function VerificationSection({ comparison }: VerificationSectionProps) {
             New Issues
           </div>
         </div>
+
+        {unableCount > 0 && (
+          <div className="p-3.5 rounded-xl bg-white/60 border border-[var(--border)] shadow-2xs col-span-2 sm:col-span-1">
+            <div className="text-2xl sm:text-3xl font-black text-gray-500">
+              {unableCount}
+            </div>
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--muted)] mt-0.5">
+              Unable to Verify
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detailed Diff Sections */}
@@ -98,12 +116,20 @@ export function VerificationSection({ comparison }: VerificationSectionProps) {
               <span>Changed Findings ({comparison.changedFindings.length})</span>
             </h4>
             <ul className="space-y-1 text-[var(--text-primary)] list-disc list-inside">
-              {comparison.changedFindings.map((f) => (
-                <li key={f.id}>
-                  <span className="font-semibold">{f.title}</span> — status or severity updated to{" "}
-                  <span className="font-bold uppercase">{f.severity}</span>
-                </li>
-              ))}
+              {comparison.changedFindings.map((f) => {
+                const diff = comparison.diffs?.find((d) => d.findingId === f.id);
+                let note = `status or severity updated to ${f.severity.toUpperCase()}`;
+                if (diff?.changes?.severity) {
+                  note = `severity changed from ${diff.changes.severity.from} to ${diff.changes.severity.to}`;
+                } else if (diff?.changes?.materialDetails) {
+                  note = diff.changes.materialDetails;
+                }
+                return (
+                  <li key={f.id}>
+                    <span className="font-semibold">{f.title}</span> — {note}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -120,6 +146,26 @@ export function VerificationSection({ comparison }: VerificationSectionProps) {
                   <span className="font-semibold">{f.title}</span> ({f.severity.toUpperCase()})
                 </li>
               ))}
+            </ul>
+          </div>
+        )}
+
+        {unableCount > 0 && comparison.unableToVerifyFindings && (
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+            <h4 className="font-bold text-gray-700 flex items-center gap-1.5 mb-2">
+              <HelpCircle className="w-4 h-4" />
+              <span>Unable to Verify ({unableCount})</span>
+            </h4>
+            <ul className="space-y-1 text-gray-700 list-disc list-inside">
+              {comparison.unableToVerifyFindings.map((f) => {
+                const diff = comparison.diffs?.find((d) => d.findingId === f.id);
+                return (
+                  <li key={f.id}>
+                    <span className="font-semibold">{f.title}</span>
+                    {diff?.reason ? ` — ${diff.reason}` : " — relevant check could not be performed"}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
