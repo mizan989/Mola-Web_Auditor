@@ -28,6 +28,13 @@ export interface StructuredEvidence {
   evidenceType?: string;
   metadata?: Record<string, unknown>;
   limitations?: string;
+
+  // Phase 6 First-Class Evidence Engine Dimensions
+  whatWasObserved?: string;
+  where?: string;
+  howObserved?: string;
+  whyItMatters?: string;
+  whatToDo?: string;
 }
 
 export interface Finding {

@@ -124,6 +124,38 @@ export function generateIssuesMarkdown(result: ScanResult): string {
       md += `- **Description**: ${finding.description}\n`;
       md += `- **Why It Matters**: ${finding.whyItMatters}\n\n`;
 
+      const whatWasObserved =
+        finding.structuredEvidence?.whatWasObserved ||
+        finding.structuredEvidence?.observation ||
+        finding.evidence;
+      const where =
+        finding.structuredEvidence?.where ||
+        finding.structuredEvidence?.affectedTarget ||
+        finding.affectedTarget ||
+        "Target Resource";
+      const howObserved =
+        finding.structuredEvidence?.howObserved ||
+        finding.structuredEvidence?.evidenceType ||
+        "static-analysis";
+      const whyItMatters =
+        finding.structuredEvidence?.whyItMatters ||
+        finding.whyItMatters;
+      const limitations =
+        finding.structuredEvidence?.limitations ||
+        finding.limitations ||
+        "Automated static analysis limited to initial response.";
+      const whatToDo =
+        finding.structuredEvidence?.whatToDo ||
+        finding.recommendation;
+
+      md += `**Traceable Evidence (6 Core Dimensions):**\n`;
+      md += `- **1. What was observed?**: ${whatWasObserved}\n`;
+      md += `- **2. Where?**: \`${where}\`\n`;
+      md += `- **3. How verified?**: \`${howObserved}\`\n`;
+      md += `- **4. Why does it matter?**: ${whyItMatters}\n`;
+      md += `- **5. Limitations**: ${limitations}\n`;
+      md += `- **6. What should the developer do?**: ${whatToDo}\n\n`;
+
       md += `**Concrete Evidence:**\n\`\`\`text\n${finding.evidence}\n\`\`\`\n\n`;
 
       if (finding.structuredEvidence) {

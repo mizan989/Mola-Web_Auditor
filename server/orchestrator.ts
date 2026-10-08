@@ -17,6 +17,7 @@ import { auditSeo } from "./scanners/seo.ts";
 import { auditAccessibility } from "./scanners/a11y.ts";
 import { auditBestPractices } from "./scanners/bestPractices.ts";
 import { auditDeepScan } from "./scanners/deep.ts";
+import { normalizeTraceableFinding } from "./evidenceEngine.ts";
 
 export interface ScanOptions {
   url: string;
@@ -132,8 +133,11 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     ...deepPassed,
   ];
 
-  // Step 6: Sort findings deterministically by Severity then Priority
-  allFindings.sort((a, b) => {
+  // Step 6: First-Class Evidence Normalization (Phase 6)
+  const traceableFindings: Finding[] = allFindings.map((f) => normalizeTraceableFinding(f, context.finalUrl));
+
+  // Step 7: Sort findings deterministically by Severity then Priority
+  traceableFindings.sort((a, b) => {
     const sevDiff = severityOrder[b.severity] - severityOrder[a.severity];
     if (sevDiff !== 0) return sevDiff;
     return priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -167,7 +171,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   let mediumCount = 0;
   let lowCount = 0;
 
-  for (const f of allFindings) {
+  for (const f of traceableFindings) {
     categoryCounts[f.category] = (categoryCounts[f.category] || 0) + 1;
     if (f.severity === "high") highCount++;
     else if (f.severity === "medium") mediumCount++;
@@ -197,7 +201,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     status,
     completeness,
     summary: {
-      totalFindings: allFindings.length,
+      totalFindings: traceableFindings.length,
       highCount,
       mediumCount,
       lowCount,
@@ -206,7 +210,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       stateCounts,
       confidenceCounts,
     },
-    findings: allFindings,
+    findings: traceableFindings,
     passedChecks: allPassed,
     technologies,
     httpInfo: httpResult.info,

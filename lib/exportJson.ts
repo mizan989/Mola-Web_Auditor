@@ -1,7 +1,22 @@
-import { ScanResult } from "@/types/audit";
+import type { ScanResult } from "@/types/audit";
+
+/**
+ * Generates an authoritative, lossless JSON export preserving the complete
+ * 6-question traceable evidence for every finding.
+ */
+export function generateAuditJson(result: ScanResult): string {
+  return JSON.stringify(result, null, 2);
+}
+
+/**
+ * Parses and returns an exported JSON audit report.
+ */
+export function parseAuditJson(jsonStr: string): ScanResult {
+  return JSON.parse(jsonStr) as ScanResult;
+}
 
 export function downloadJsonFile(result: ScanResult) {
-  const jsonStr = JSON.stringify(result, null, 2);
+  const jsonStr = generateAuditJson(result);
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
