@@ -10,6 +10,7 @@ import {
   extractRobotsMeta,
   extractHeadings,
 } from "../htmlParser.ts";
+import { validateCanonicalCandidate } from "../candidateValidator.ts";
 
 export interface SeoAuditResult {
   seoData: SeoInspection;
@@ -196,10 +197,11 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
     });
   }
 
-  // 3. Canonical URL
+  // 3. Canonical URL (Phase 5 Candidate Validation)
   const { canonicalUrl, canonicals } = extractCanonicalLinks(root);
+  const { missingEvaluation, multipleEvaluation } = validateCanonicalCandidate({ canonicals });
 
-  if (canonicals.length > 1) {
+  if (multipleEvaluation && multipleEvaluation.outcome === "confirmed") {
     findings.push({
       id: "seo-canonical-multiple",
       category: "seo",
@@ -227,7 +229,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
     });
   }
 
-  if (!canonicalUrl) {
+  if (missingEvaluation.outcome === "confirmed") {
     findings.push({
       id: "seo-canonical-missing",
       category: "seo",

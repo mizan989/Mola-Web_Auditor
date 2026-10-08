@@ -1,4 +1,5 @@
 import type { AuditContext, DetectedTechnology } from "../../types/audit.ts";
+import { validateTechnologyCandidate } from "../candidateValidator.ts";
 
 /**
  * Detects website technologies using verifiable, evidence-based heuristics.
@@ -58,15 +59,26 @@ export function detectTechnologies(
     const reactRoot = htmlText.includes("data-reactroot");
     const reactDomScript = /<script\b[^>]*src=["'][^"']*react(?:-dom)?(?:\.production|\.development)?\.js/i.test(htmlText);
     const reactHook = htmlText.includes("__REACT_DEVTOOLS_GLOBAL_HOOK__");
+    const hasReactDirectProof = Boolean(reactRoot || reactDomScript || reactHook);
 
-    if (reactRoot || reactDomScript || reactHook) {
-      const evidence = reactRoot
-        ? "DOM attribute: data-reactroot"
-        : reactDomScript
-        ? "Script tag referencing React bundle"
-        : "DevTools hook signature: __REACT_DEVTOOLS_GLOBAL_HOOK__";
-      add("React", "Framework", 95, evidence);
+    const reactEvidence = reactRoot
+      ? "DOM attribute: data-reactroot"
+      : reactDomScript
+      ? "Script tag referencing React bundle"
+      : "DevTools hook signature: __REACT_DEVTOOLS_GLOBAL_HOOK__";
+
+    const reactEval = validateTechnologyCandidate({
+      techName: "React",
+      rawSignal: lowerHtml.includes("react") ? "react" : "",
+      hasDirectProof: hasReactDirectProof,
+      hasClusterProof: false,
+      evidence: reactEvidence,
+    });
+
+    if (reactEval.outcome === "confirmed") {
+      add("React", "Framework", 95, reactEval.reason);
     }
+    // Rejected candidate (e.g. text 'reaction' or 'reacting') is never added.
   }
 
   // 3. Vue.js & Nuxt
@@ -102,25 +114,34 @@ export function detectTechnologies(
   // 6. Tailwind CSS (ISSUE-016: Rigorous evidence required, no generic flex/grid false positives)
   const twCdn = /<script\b[^>]*src=["'][^"']*(?:cdn\.tailwindcss\.com|tailwindcss\.js)/i.test(htmlText);
   const twStyle = /<link\b[^>]*href=["'][^"']*tailwind(?:css)?(?:\.min)?\.css/i.test(htmlText);
-  // Distinctive Tailwind utility combinations with responsive, state, or arbitrary prefixes
   const twDistinctClasses = (htmlText.match(/\b(?:sm|md|lg|xl|2xl|hover|focus|dark|active):[a-z0-9-]+\b/g) || []).length;
   const twArbitrary = (htmlText.match(/\b(?:bg|text|border|w|h)-\[[^\]]+\]\b/g) || []).length;
+  const hasTwDirect = Boolean(twCdn || twStyle);
+  const hasTwCluster = Boolean(twDistinctClasses >= 3 || twArbitrary >= 2);
 
-  if (twCdn || twStyle) {
+  const twEvidence = twCdn
+    ? "Tailwind CDN script tag detected"
+    : twStyle
+    ? "Tailwind CSS stylesheet link detected"
+    : `Detected ${twDistinctClasses} prefixed utility classes and ${twArbitrary} arbitrary value directives`;
+
+  const twEval = validateTechnologyCandidate({
+    techName: "Tailwind CSS",
+    rawSignal: "tailwind",
+    hasDirectProof: hasTwDirect,
+    hasClusterProof: hasTwCluster,
+    evidence: twEvidence,
+  });
+
+  if (twEval.outcome === "confirmed") {
     add(
       "Tailwind CSS",
       "UI / Fonts",
-      100,
-      twCdn ? "Tailwind CDN script tag detected" : "Tailwind CSS stylesheet link detected"
-    );
-  } else if (twDistinctClasses >= 3 || twArbitrary >= 2) {
-    add(
-      "Tailwind CSS",
-      "UI / Fonts",
-      85,
-      `Detected ${twDistinctClasses} prefixed utility classes and ${twArbitrary} arbitrary value directives`
+      hasTwDirect ? 100 : 85,
+      twEval.reason
     );
   }
+  // Rejected candidate (e.g. single isolated 'flex' or 'p-4') is never added.
 
   // 7. WordPress
   const wpTheme = htmlText.includes("/wp-content/themes/");

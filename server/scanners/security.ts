@@ -1,6 +1,12 @@
 import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
 import { parseHtmlDocument, extractInsecureMixedContent } from "../htmlParser.ts";
+import {
+  validateHstsCandidate,
+  validateCspUnsafeCandidate,
+  validateXfoCandidate,
+  validateMixedContentCandidate,
+} from "../candidateValidator.ts";
 
 export interface SecurityAuditResult {
   findings: Finding[];
@@ -145,13 +151,9 @@ export function auditSecurity(
     const scriptDirective = (scriptSrcMatch ? scriptSrcMatch[1] : (defaultSrcMatch ? defaultSrcMatch[1] : "")).trim();
 
     const hasUnsafeEval = scriptDirective.includes("'unsafe-eval'");
-    const hasUnsafeInlineScript =
-      scriptDirective.includes("'unsafe-inline'") &&
-      !scriptDirective.includes("'nonce-") &&
-      !scriptDirective.includes("'strict-dynamic'") &&
-      !/'sha(?:256|384|512)-/i.test(scriptDirective);
+    const cspUnsafeEval = validateCspUnsafeCandidate({ cspHeader: csp });
 
-    if (hasUnsafeEval || hasUnsafeInlineScript) {
+    if (hasUnsafeEval || cspUnsafeEval.outcome === "confirmed") {
       findings.push({
         id: "sec-csp-unsafe",
         category: "security",
@@ -201,7 +203,8 @@ export function auditSecurity(
 
   // 2. Strict-Transport-Security (HSTS)
   const hsts = headers["strict-transport-security"];
-  if (isHttps && !hsts) {
+  const hstsEval = validateHstsCandidate({ isHttps, hstsHeader: hsts });
+  if (hstsEval.outcome === "confirmed") {
     findings.push({
       id: "sec-hsts-missing",
       category: "security",
@@ -248,8 +251,8 @@ export function auditSecurity(
 
   // 3. X-Frame-Options (Clickjacking)
   const xfo = headers["x-frame-options"];
-  const cspFrameAncestors = csp && csp.includes("frame-ancestors");
-  if (!xfo && !cspFrameAncestors) {
+  const xfoEval = validateXfoCandidate({ xfoHeader: xfo, cspHeader: csp });
+  if (xfoEval.outcome === "confirmed") {
     findings.push({
       id: "sec-xfo-missing",
       category: "security",
@@ -498,7 +501,16 @@ export function auditSecurity(
   // 9. Mixed Content Verification (ISSUE-019)
   if (isHttps) {
     const root = parseHtmlDocument(htmlText);
-    const insecureSources = extractInsecureMixedContent(root);
+    const candidateSources = extractInsecureMixedContent(root);
+    const insecureSources: string[] = [];
+
+    for (const src of candidateSources) {
+      const evaluation = validateMixedContentCandidate({ url: src, isHttps });
+      if (evaluation.outcome === "confirmed") {
+        insecureSources.push(src);
+      }
+      // If rejected (e.g. XML namespace, non-HTTPS target), candidate is discarded.
+    }
 
     if (insecureSources.length > 0) {
       findings.push({

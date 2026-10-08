@@ -1,6 +1,11 @@
 import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
 import { parseHtmlDocument, extractScripts, extractIframes } from "../htmlParser.ts";
+import {
+  validateSriCandidate,
+  validateCookieCandidate,
+  validateIframeSecurityCandidate,
+} from "../candidateValidator.ts";
 
 export interface DeepScanResult {
   findings: Finding[];
@@ -10,7 +15,7 @@ export interface DeepScanResult {
 /**
  * Performs deep resource, third-party script, and subresource security inspection.
  * Consumes the shared authoritative AuditContext (Phase 2), with fallback to direct parameters.
- * Uses structured HTML parsing (Phase 4) instead of regex to inspect script SRI and iframe restrictions.
+ * Uses structured HTML parsing (Phase 4) and explicit Candidate Detection vs Evidence Validation (Phase 5).
  * Executed exclusively during Deep Scan mode (Complies with ISSUE-009, ISSUE-022, ISSUE-023).
  */
 export function auditDeepScan(
@@ -29,27 +34,35 @@ export function auditDeepScan(
   const host = new URL(finalUrl).hostname;
   const root = parseHtmlDocument(htmlText);
 
-  // 1. Third-Party Script Subresource Integrity (SRI) Audit
+  // 1. Third-Party Script Subresource Integrity (SRI) Audit (Phase 5 Candidate Validation)
   const scripts = extractScripts(root);
   const externalScriptsWithoutSri: string[] = [];
   let totalExternalScripts = 0;
 
   for (const script of scripts) {
-    const src = script.src;
-    // Check if script is hosted on external domain
-    if (src.startsWith("//") || src.startsWith("http://") || src.startsWith("https://")) {
+    const evaluation = validateSriCandidate({
+      src: script.src,
+      host,
+      finalUrl,
+      hasIntegrity: script.hasIntegrity,
+    });
+
+    if (evaluation.outcome === "confirmed") {
+      externalScriptsWithoutSri.push(script.src);
+      totalExternalScripts++;
+    } else if (
+      evaluation.outcome === "rejected" &&
+      (script.src.startsWith("//") || script.src.startsWith("http://") || script.src.startsWith("https://"))
+    ) {
       try {
-        const scriptHost = new URL(src, finalUrl).hostname;
-        if (scriptHost !== host) {
+        if (new URL(script.src, finalUrl).hostname !== host) {
           totalExternalScripts++;
-          if (!script.hasIntegrity) {
-            externalScriptsWithoutSri.push(src);
-          }
         }
       } catch {
         // Ignore unparseable URLs
       }
     }
+    // Rejected candidates (first-party relative or same-host scripts) do not require SRI.
   }
 
   if (externalScriptsWithoutSri.length > 0) {
@@ -106,19 +119,16 @@ export function auditDeepScan(
     });
   }
 
-  // 2. Cookie Security Attributes (Set-Cookie)
+  // 2. Cookie Security Attributes (Set-Cookie) (Phase 5 Candidate Validation)
   const setCookie = headers["set-cookie"];
   if (setCookie) {
-    const isSecure = /\bsecure\b/i.test(setCookie);
-    const isHttpOnly = /\bhttponly\b/i.test(setCookie);
-    const hasSameSite = /\bsamesite=(?:lax|strict|none)\b/i.test(setCookie);
+    const cookieEval = validateCookieCandidate({
+      cookieString: setCookie,
+      isHttps: finalUrl.startsWith("https://"),
+    });
 
-    const issues: string[] = [];
-    if (!isSecure && finalUrl.startsWith("https://")) issues.push("missing 'Secure' flag");
-    if (!isHttpOnly) issues.push("missing 'HttpOnly' flag");
-    if (!hasSameSite) issues.push("missing 'SameSite' attribute");
-
-    if (issues.length > 0) {
+    if (cookieEval.outcome === "confirmed") {
+      const issues = cookieEval.candidateValue?.issues || [];
       findings.push({
         id: "sec-cookie-insecure",
         category: "security",
@@ -164,16 +174,22 @@ export function auditDeepScan(
     }
   }
 
-  // 3. Iframe Sandbox & Lazy Loading
+  // 3. Iframe Sandbox & Lazy Loading (Phase 5 Candidate Validation)
   const iframes = extractIframes(root);
   const iframesMissingSandbox: string[] = [];
   const iframesMissingLazy: string[] = [];
 
   for (const iframe of iframes) {
-    if (!iframe.hasSandbox) {
+    const { sandboxEvaluation, lazyEvaluation } = validateIframeSecurityCandidate({
+      src: iframe.src,
+      hasSandbox: iframe.hasSandbox,
+      isLazy: iframe.isLazy,
+    });
+
+    if (sandboxEvaluation.outcome === "confirmed") {
       iframesMissingSandbox.push(iframe.src);
     }
-    if (!iframe.isLazy) {
+    if (lazyEvaluation.outcome === "confirmed") {
       iframesMissingLazy.push(iframe.src);
     }
   }

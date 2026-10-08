@@ -1,5 +1,6 @@
 import { parse, HTMLElement } from "node-html-parser";
 import type { DiscoveredResources } from "../types/audit.ts";
+import { validateInputLabelCandidate, validateImageAltCandidate } from "./candidateValidator.ts";
 
 /**
  * Strips residual markup tags, decodes common HTML entities, and collapses whitespace.
@@ -242,8 +243,13 @@ export function extractImageAccessibility(root: HTMLElement): ImagesExtraction {
   const missingAlt: string[] = [];
 
   for (const img of imgEls) {
-    // WCAG: alt="" is valid for decorative images, but omitting alt entirely is a violation
-    if (!img.hasAttribute("alt")) {
+    const hasAlt = img.hasAttribute("alt");
+    const evalResult = validateImageAltCandidate({
+      hasAltAttribute: hasAlt,
+      src: img.getAttribute("src") || undefined,
+    });
+
+    if (evalResult.outcome === "confirmed") {
       const outer = img.outerHTML ? img.outerHTML.replace(/\s+/g, " ").slice(0, 90) : "<img>";
       missingAlt.push(outer);
     }
@@ -297,11 +303,6 @@ export function extractFormLabels(root: HTMLElement): FormLabelsExtraction {
 
   for (const input of inputEls) {
     const type = (input.getAttribute("type") || "text").toLowerCase().trim();
-    if (["hidden", "submit", "button", "reset", "image"].includes(type)) {
-      continue;
-    }
-
-    totalInputs++;
 
     // Check accessible naming sources:
     // 1. ARIA label or labelledby
@@ -320,9 +321,22 @@ export function extractFormLabels(root: HTMLElement): FormLabelsExtraction {
     // 4. Wrapped inside <label> element
     const isWrappedInLabel = Boolean(input.closest("label"));
 
-    const hasAccessibleName = hasAria || hasTitle || hasAssociatedLabelFor || isWrappedInLabel;
+    const evalResult = validateInputLabelCandidate({
+      type,
+      id,
+      hasAria,
+      hasTitle,
+      hasLabelFor: hasAssociatedLabelFor,
+      isWrappedInLabel,
+    });
 
-    if (!hasAccessibleName) {
+    if (["hidden", "submit", "button", "reset", "image"].includes(type)) {
+      continue;
+    }
+
+    totalInputs++;
+
+    if (evalResult.outcome === "confirmed") {
       unlabelledInputs++;
       if (unlabelledSamples.length < 5) {
         const outer = input.outerHTML ? input.outerHTML.replace(/\s+/g, " ").slice(0, 90) : "<input>";
