@@ -27,20 +27,20 @@
 <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind-CSS%20v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
 <a href="https://antideploy.com"><img src="https://img.shields.io/badge/Deployed%20on-Antideploy-38B2AC?style=flat-square" alt="Antideploy"></a>
 
-<a href="PRD.md"><img src="https://img.shields.io/badge/PRD-Documented-06141B?style=flat-square" alt="PRD"></a>
+<!-- <a href="PRD.md"><img src="https://img.shields.io/badge/PRD-Documented-06141B?style=flat-square" alt="PRD"></a>
 <a href="RULES.md"><img src="https://img.shields.io/badge/Rules-Strict-06141B?style=flat-square" alt="Rules"></a>
 <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Verified-06141B?style=flat-square" alt="Architecture"></a>
 <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-SSRF%20Hardened-06141B?style=flat-square" alt="Security"></a>
 <a href="DESIGN.md"><img src="https://img.shields.io/badge/Design-System-06141B?style=flat-square" alt="Design"></a>
-<a href="issues.md"><img src="https://img.shields.io/badge/Issues-ISSUE--001%20to%20050-06141B?style=flat-square" alt="Issues Ledger"></a>
+<a href="issues.md"><img src="https://img.shields.io/badge/Issues-ISSUE--001%20to%20050-06141B?style=flat-square" alt="Issues Ledger"></a> -->
 
 </div>
 
 > [!TIP]
 > **Live Web Auditor Ready!** Audit any public website live at **[mola.antideploy.app](https://mola.antideploy.app)** to receive concrete evidence, HTTP telemetry, and one-click `issues.md` exports for AI coding assistants (Gemini, Claude, Cursor) — [Get started locally in under 60 seconds](#-quick-start).
 >
-> 📖 **Governance & Specifications**:
-> [Product Requirements (`PRD.md`)](PRD.md) · [Engineering Rules (`RULES.md`)](RULES.md) · [System Architecture (`ARCHITECTURE.md`)](ARCHITECTURE.md) · [Security & Threat Model (`SECURITY.md`)](SECURITY.md) · [Design System (`DESIGN.md`)](DESIGN.md) · [Issue Ledger (`issues.md`)](issues.md)
+<!-- > 📖 **Governance & Specifications**:
+> [Product Requirements (`PRD.md`)](PRD.md) · [Engineering Rules (`RULES.md`)](RULES.md) · [System Architecture (`ARCHITECTURE.md`)](ARCHITECTURE.md) · [Security & Threat Model (`SECURITY.md`)](SECURITY.md) · [Design System (`DESIGN.md`)](DESIGN.md) · [Issue Ledger (`issues.md`)](issues.md) -->
 
 ---
 
@@ -407,14 +407,14 @@ d:/PROJECTS/Mola/
 │   └── url-validation.test.ts    # URL & port restriction unit tests
 ├── types/
 │   └── audit.ts                  # Finding, Result & Verification schemas
-├── ARCHITECTURE.md               # System architecture and data pipeline design
+<!-- ├── ARCHITECTURE.md               # System architecture and data pipeline design
 ├── DESIGN.md                     # Design tokens, typography, and a11y guidelines
-├── issues.md                     # Issue resolution ledger (ISSUE-001 to ISSUE-050)
+├── issues.md                     # Issue resolution ledger (ISSUE-001 to ISSUE-050) -->
 ├── middleware.ts                 # Authoritative nonce-based Content-Security-Policy
 ├── next.config.ts                # Next.js security headers & build configuration
-├── PRD.md                        # Product Requirements Document
+<!-- ├── PRD.md                        # Product Requirements Document
 ├── RULES.md                      # Engineering and architecture rules
-├── SECURITY.md                   # Security policy, threat model, and protections
+├── SECURITY.md                   # Security policy, threat model, and protections -->
 └── README.md                     # Project overview & documentation
 ```
 
