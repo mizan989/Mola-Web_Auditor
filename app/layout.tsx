@@ -46,6 +46,22 @@ export default async function RootLayout({
   await headers();
   return (
     <html lang="en">
+      <head>
+        <link
+          rel="preload"
+          href="/fonts/Inter.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/JetBrainsMono.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-primary)]">
         {/* Navbar */}
         <header className="h-[72px] px-4 sm:px-12 flex items-center justify-between border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-sm sticky top-0 z-50">

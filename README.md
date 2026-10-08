@@ -63,6 +63,7 @@ $$\text{Enter URL} \longrightarrow \text{Validate SSRF} \longrightarrow \text{In
 - **SSRF-Hardened Network Architecture** — Built-in RFC 1918 private IP range blocking, loopback mitigation, cloud metadata (`169.254.169.254`) isolation, connection-time DNS rebinding defense, and hop-by-hop redirect validation
 - **Deterministic Check Coverage** — Explicitly distinguishes "not found" (clean pass) from "not checked" (unsupported or limited) without arbitrary percentage figures
 - **Ephemeral In-Memory Scanning** — Audits are executed ephemerally in memory without application database persistence or tracking cookies. Note that upstream hosting infrastructure or edge CDNs may retain standard operational access logs.
+- **Self-Hosted Local Typography** — Inter and JetBrains Mono fonts are bundled and served locally from `/fonts` with zero external CDN requests, guaranteeing full privacy, strict CSP compliance (`font-src 'self'`), and air-gapped readiness
 - **Quiet Developer Aesthetic** — Minimalist editorial layout, high-contrast typography, and full-viewport section views optimized for desktop and mobile
 
 <br>
@@ -374,6 +375,8 @@ d:/PROJECTS/Mola/
 │   ├── compare.ts                # Semantic 5-state finding comparison engine
 │   ├── exportJson.ts             # JSON export & file download helpers
 │   └── exportMarkdown.ts         # AI-ready issues.md Markdown generator
+├── public/
+│   └── fonts/                    # Self-hosted WOFF2 fonts (Inter, JetBrains Mono)
 ├── server/
 │   ├── browser.ts                # Isolated browser runner adapter & runtime checks
 │   ├── context.ts                # AuditContext construction & resource discovery
