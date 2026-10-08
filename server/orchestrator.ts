@@ -97,7 +97,7 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     ...deepFindings,
   ];
 
-  if (context.body.isTruncated) {
+  if (context.body.isTruncated && !allFindings.some((f) => f.id === "perf-payload-truncated")) {
     allFindings.push({
       id: "perf-payload-truncated",
       category: "performance",
