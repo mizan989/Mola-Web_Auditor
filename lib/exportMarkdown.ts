@@ -101,6 +101,15 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     md += `\n`;
   }
 
+  // Audit Scope & Limitations (Phase 10 & Phase 12)
+  if (result.limitations && result.limitations.length > 0) {
+    md += `## Audit Scope & Limitations\n\n`;
+    for (const lim of result.limitations) {
+      md += `- ℹ️ ${lim}\n`;
+    }
+    md += `\n`;
+  }
+
   // Findings
   md += `## Prioritized Action Items\n\n`;
 
@@ -188,6 +197,20 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     for (const check of passedChecks) {
       const stateBadge = check.state && check.state !== "confirmed" ? ` [${check.state.toUpperCase()}]` : "";
       md += `- [x] **[${check.category}]**${stateBadge} ${check.title}: ${check.detail}\n`;
+    }
+    md += `\n`;
+  }
+
+
+  // Browser Execution Diagnostics (Phase 10)
+  if (result.browserExecution && result.browserExecution.executed) {
+    md += `## Browser Execution Diagnostics\n\n`;
+    md += `- **Rendered DOM Size**: ${result.browserExecution.renderedDomByteLength ?? 0} bytes\n`;
+    md += `- **Navigation Duration**: ${result.browserExecution.navigationDurationMs ?? 0} ms\n`;
+    md += `- **Dynamic JS Content Rendered**: ${result.browserExecution.jsRenderedContentDetected ? "Yes" : "No"}\n`;
+    md += `- **Runtime Resources Observed**: ${result.browserExecution.observedResources?.length ?? 0}\n`;
+    if (result.browserExecution.runtimeMixedContentCount !== undefined) {
+      md += `- **Runtime Insecure Mixed Content**: ${result.browserExecution.runtimeMixedContentCount}\n`;
     }
     md += `\n`;
   }

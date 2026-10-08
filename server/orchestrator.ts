@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import type {
   Finding,
   FindingCategory,
@@ -7,6 +6,7 @@ import type {
   FindingState,
   PassedCheck,
   ScanResult,
+  BrowserExecutionResult,
 } from "../types/audit.ts";
 import { validateUrlAsync } from "./validators/url.ts";
 import { performHttpInspection } from "./scanners/http.ts";
@@ -20,6 +20,7 @@ import { auditDeepScan } from "./scanners/deep.ts";
 import { normalizeTraceableFinding } from "./evidenceEngine.ts";
 import { enforceEvidenceQuality } from "./evidenceQuality.ts";
 import { deduplicateFindings } from "./deduplication.ts";
+import { executeIsolatedBrowserScan } from "./browser.ts";
 
 export interface ScanOptions {
   url: string;
@@ -79,13 +80,27 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   const bestPractices = auditBestPractices(context);
   const technologies = context.technologyObservations;
 
-  // Step 5: Run Deep Scan engine if requested (ISSUE-009, ISSUE-023)
+  // Step 5: Run Deep Scan engine if requested (ISSUE-009, ISSUE-023, Phase 10)
   let deepFindings: Finding[] = [];
   let deepPassed: PassedCheck[] = [];
+  let browserExecution: BrowserExecutionResult | undefined;
+
   if (scanMode === "deep") {
     const deepResult = auditDeepScan(context);
     deepFindings = deepResult.findings;
     deepPassed = deepResult.passedChecks;
+
+    // Phase 10: Isolated Browser Execution for Deep Scan
+    browserExecution = await executeIsolatedBrowserScan(context);
+    if (browserExecution.findings && browserExecution.findings.length > 0) {
+      deepFindings.push(...browserExecution.findings);
+    }
+    if (browserExecution.passedChecks && browserExecution.passedChecks.length > 0) {
+      deepPassed.push(...browserExecution.passedChecks);
+    }
+    if (browserExecution.limitationReason) {
+      context.limitations.push(browserExecution.limitationReason);
+    }
   }
 
   // Step 6: Aggregate findings
@@ -225,6 +240,8 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     seoData: seo.seoData,
     accessibilitySummary: accessibility.summary,
     reconnaissance: context.recon,
+    limitations: context.limitations.length > 0 ? [...context.limitations] : undefined,
+    browserExecution,
   };
 }
 

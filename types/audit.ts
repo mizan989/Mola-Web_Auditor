@@ -152,6 +152,8 @@ export interface ScanResult {
   seoData: SeoInspection;
   accessibilitySummary: AccessibilityInspection;
   reconnaissance?: ReconnaissanceMap;
+  limitations?: string[];
+  browserExecution?: BrowserExecutionResult;
 }
 
 export interface VerificationComparison {
@@ -265,4 +267,26 @@ export interface ReconnaissanceMap {
   securityObservations: ReconSecurityObservation[];
   limitations: string[];
   collectedAt: string;
+}
+
+export interface BrowserResourceObservation {
+  url: string;
+  resourceType: string;
+  isMixedContent: boolean;
+  isHttps: boolean;
+}
+
+export interface BrowserExecutionResult {
+  isSupported: boolean;
+  executed: boolean;
+  limitationReason?: string;
+  navigationDurationMs?: number;
+  renderedDomByteLength?: number;
+  observedResources?: BrowserResourceObservation[];
+  jsRenderedContentDetected?: boolean;
+  jsRenderedElementsCount?: number;
+  renderedA11yIssuesCount?: number;
+  runtimeMixedContentCount?: number;
+  findings?: Finding[];
+  passedChecks?: PassedCheck[];
 }
