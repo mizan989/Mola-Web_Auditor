@@ -1,5 +1,6 @@
 import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import { parseHtmlDocument, extractScripts, extractIframes } from "../htmlParser.ts";
 
 export interface DeepScanResult {
   findings: Finding[];
@@ -9,6 +10,7 @@ export interface DeepScanResult {
 /**
  * Performs deep resource, third-party script, and subresource security inspection.
  * Consumes the shared authoritative AuditContext (Phase 2), with fallback to direct parameters.
+ * Uses structured HTML parsing (Phase 4) instead of regex to inspect script SRI and iframe restrictions.
  * Executed exclusively during Deep Scan mode (Complies with ISSUE-009, ISSUE-022, ISSUE-023).
  */
 export function auditDeepScan(
@@ -25,26 +27,22 @@ export function auditDeepScan(
   const passedChecks: PassedCheck[] = [];
 
   const host = new URL(finalUrl).hostname;
+  const root = parseHtmlDocument(htmlText);
 
   // 1. Third-Party Script Subresource Integrity (SRI) Audit
-  const scriptTags = Array.from(htmlText.matchAll(/<script\b([^>]*)>/gi));
+  const scripts = extractScripts(root);
   const externalScriptsWithoutSri: string[] = [];
   let totalExternalScripts = 0;
 
-  for (const match of scriptTags) {
-    const attrs = match[1];
-    const srcMatch = attrs.match(/\bsrc=["']([^"']+)["']/i);
-    if (!srcMatch) continue;
-
-    const src = srcMatch[1];
+  for (const script of scripts) {
+    const src = script.src;
     // Check if script is hosted on external domain
     if (src.startsWith("//") || src.startsWith("http://") || src.startsWith("https://")) {
       try {
         const scriptHost = new URL(src, finalUrl).hostname;
         if (scriptHost !== host) {
           totalExternalScripts++;
-          const hasIntegrity = /\bintegrity=["']sha(?:256|384|512)-/i.test(attrs);
-          if (!hasIntegrity) {
+          if (!script.hasIntegrity) {
             externalScriptsWithoutSri.push(src);
           }
         }
@@ -167,20 +165,16 @@ export function auditDeepScan(
   }
 
   // 3. Iframe Sandbox & Lazy Loading
-  const iframeTags = Array.from(htmlText.matchAll(/<iframe\b([^>]*)>/gi));
+  const iframes = extractIframes(root);
   const iframesMissingSandbox: string[] = [];
   const iframesMissingLazy: string[] = [];
 
-  for (const match of iframeTags) {
-    const attrs = match[1];
-    const srcMatch = attrs.match(/\bsrc=["']([^"']+)["']/i);
-    const src = srcMatch ? srcMatch[1] : "unknown-iframe";
-
-    if (!/\bsandbox\b/i.test(attrs)) {
-      iframesMissingSandbox.push(src);
+  for (const iframe of iframes) {
+    if (!iframe.hasSandbox) {
+      iframesMissingSandbox.push(iframe.src);
     }
-    if (!/\bloading=["']lazy["']/i.test(attrs)) {
-      iframesMissingLazy.push(src);
+    if (!iframe.isLazy) {
+      iframesMissingLazy.push(iframe.src);
     }
   }
 
@@ -247,25 +241,6 @@ export function auditDeepScan(
       instancesCount: iframesMissingLazy.length,
     });
   }
-
-  // 4. Headless Rendered Environment Note (ISSUE-022)
-  passedChecks.push({
-    id: "deep-resource-inspection-complete",
-    category: "best-practices",
-    state: "observation",
-    confidence: "high",
-    structuredEvidence: {
-      id: "ev-deep-resource-inspection-complete",
-      sourceUrl: finalUrl,
-      affectedTarget: "DOM & Subresources",
-      observation: `Inspected ${scriptTags.length} script tags, ${iframeTags.length} iframes, and subresource security policies. Headless browser rendering is not configured in this environment; static resource tree inspected.`,
-      expectedCondition: "Subresource inspection performed",
-      evidenceType: "static-ast-inspection",
-      limitations: "Headless browser rendering is not configured in this serverless environment; dynamically injected scripts and frames were not evaluated.",
-    },
-    title: "Deep Subresource & Asset Audit",
-    detail: `Inspected ${scriptTags.length} script tags, ${iframeTags.length} iframes, and subresource security policies. (Headless browser rendering is not configured in this serverless environment; static resource tree inspected).`,
-  });
 
   return { findings, passedChecks };
 }

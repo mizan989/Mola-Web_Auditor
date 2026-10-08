@@ -1,5 +1,15 @@
 import type { AuditContext, Finding, PassedCheck, SeoInspection } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import {
+  parseHtmlDocument,
+  extractDocumentTitle,
+  extractMetaDescription,
+  extractCanonicalLinks,
+  extractViewportMeta,
+  extractOpenGraphMeta,
+  extractRobotsMeta,
+  extractHeadings,
+} from "../htmlParser.ts";
 
 export interface SeoAuditResult {
   seoData: SeoInspection;
@@ -8,16 +18,9 @@ export interface SeoAuditResult {
 }
 
 /**
- * Strips HTML tags and collapses whitespace from a string snippet.
- */
-function cleanText(raw: string): string {
-  return raw.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-}
-
-/**
  * Audits technical search engine optimization (SEO) factors.
  * Consumes the shared authoritative AuditContext (Phase 2), with fallback to raw HTML string.
- * Complies with ISSUE-017 (concrete document-structure analysis and attached evidence).
+ * Uses structured HTML parsing to accurately inspect titles, metas, canonicals, and heading hierarchies (Phase 4).
  */
 export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   const isCtx = isAuditContext(contextOrHtml);
@@ -26,9 +29,10 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 
+  const root = parseHtmlDocument(htmlText);
+
   // 1. Document <title>
-  const titleMatch = htmlText.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
-  const rawTitle = titleMatch ? cleanText(titleMatch[1]) : null;
+  const { rawTitle } = extractDocumentTitle(root);
   const titleLength = rawTitle ? rawTitle.length : 0;
 
   if (!rawTitle) {
@@ -43,7 +47,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
       description: "The HTML document has no <title> tag inside the <head> element.",
       whyItMatters:
         "The <title> tag is the primary textual signal for search engine ranking algorithms and is displayed as the clickable headline in search snippets and browser tabs.",
-      evidence: '<head> contains no <title>...</title> element',
+      evidence: "<head> contains no <title>...</title> element",
       structuredEvidence: {
         id: "ev-seo-title-missing",
         affectedTarget: "<head> Element",
@@ -122,10 +126,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   }
 
   // 2. Extract <meta name="description">
-  const metaDescMatch =
-    htmlText.match(/<meta\b[^>]*\bname=["']description["'][^>]*\bcontent=["']([^"']*)["']/i) ||
-    htmlText.match(/<meta\b[^>]*\bcontent=["']([^"']*)["'][^>]*\bname=["']description["']/i);
-  const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : null;
+  const { metaDesc } = extractMetaDescription(root);
   const descLength = metaDesc ? metaDesc.length : 0;
 
   if (!metaDesc) {
@@ -196,10 +197,35 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   }
 
   // 3. Canonical URL
-  const canonicalMatch =
-    htmlText.match(/<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["']([^"']*)["']/i) ||
-    htmlText.match(/<link\b[^>]*\bhref=["']([^"']*)["'][^>]*\brel=["']canonical["']/i);
-  const canonicalUrl = canonicalMatch ? canonicalMatch[1].trim() : null;
+  const { canonicalUrl, canonicals } = extractCanonicalLinks(root);
+
+  if (canonicals.length > 1) {
+    findings.push({
+      id: "seo-canonical-multiple",
+      category: "seo",
+      severity: "medium",
+      priority: "fix-first",
+      state: "confirmed",
+      confidence: "high",
+      title: "Multiple Canonical Link Tags Detected",
+      description: `Detected ${canonicals.length} conflicting <link rel="canonical"> tags in document.`,
+      whyItMatters:
+        "When multiple canonical tags exist, search engines may disregard all of them or pick an arbitrary one, disrupting search indexing.",
+      evidence: `Found ${canonicals.length} canonical links: ${canonicals.join(", ")}`,
+      structuredEvidence: {
+        id: "ev-seo-canonical-multiple",
+        affectedTarget: "<head> Links",
+        observation: `Detected ${canonicals.length} conflicting canonical link tags`,
+        expectedCondition: "Exactly one canonical link tag",
+        evidenceType: "dom-inspection",
+        metadata: { canonicals, count: canonicals.length },
+      },
+      affectedTarget: "<head> Links",
+      recommendation: "Ensure only one self-referential <link rel=\"canonical\"> tag is declared.",
+      instancesCount: canonicals.length,
+      instances: canonicals,
+    });
+  }
 
   if (!canonicalUrl) {
     findings.push({
@@ -225,7 +251,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
       recommendation: "Declare a self-referential canonical URL tag.",
       codeSnippet: '<link rel="canonical" href="https://example.com/page" />',
     });
-  } else {
+  } else if (canonicals.length === 1) {
     passedChecks.push({
       id: "seo-canonical-present",
       category: "seo",
@@ -244,8 +270,8 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   }
 
   // 4. Mobile Viewport Meta Tag
-  const viewportMatch = htmlText.match(/<meta\b[^>]*\bname=["']viewport["'][^>]*\bcontent=["']([^"']*)["']/i);
-  if (!viewportMatch) {
+  const viewportContent = extractViewportMeta(root);
+  if (!viewportContent) {
     findings.push({
       id: "seo-viewport-missing",
       category: "seo",
@@ -278,20 +304,17 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
       structuredEvidence: {
         id: "ev-seo-viewport-present",
         affectedTarget: "<head>",
-        observation: `Viewport: ${viewportMatch[1]}`,
+        observation: `Viewport: ${viewportContent}`,
         expectedCondition: "Responsive viewport meta tag configured",
         evidenceType: "dom-inspection",
       },
       title: "Responsive Viewport Configured",
-      detail: `Viewport: ${viewportMatch[1]}`,
+      detail: `Viewport: ${viewportContent}`,
     });
   }
 
   // 5. OpenGraph & Social Sharing Meta Tags
-  const ogTitleMatch = htmlText.match(/<meta\b[^>]*\bproperty=["']og:title["'][^>]*\bcontent=["']([^"']*)["']/i);
-  const ogImageMatch = htmlText.match(/<meta\b[^>]*\bproperty=["']og:image["'][^>]*\bcontent=["']([^"']*)["']/i);
-  const ogTitle = ogTitleMatch ? ogTitleMatch[1].trim() : null;
-  const ogImage = ogImageMatch ? ogImageMatch[1].trim() : null;
+  const { ogTitle, ogImage } = extractOpenGraphMeta(root);
 
   if (!ogTitle || !ogImage) {
     findings.push({
@@ -337,8 +360,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
   }
 
   // 6. Heading Hierarchy & H1 Check
-  const h1Matches = Array.from(htmlText.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi));
-  const h1Count = h1Matches.length;
+  const { headings, h1Count, h1Instances } = extractHeadings(root);
 
   if (h1Count === 0) {
     findings.push({
@@ -388,7 +410,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
       affectedTarget: "Heading Structure",
       recommendation: "Structure sub-sections with <h2> and <h3>, reserving <h1> for the page title.",
       instancesCount: h1Count,
-      instances: h1Matches.map((m) => cleanText(m[1]).slice(0, 60)),
+      instances: h1Instances,
     });
   } else {
     passedChecks.push({
@@ -399,23 +421,13 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
       structuredEvidence: {
         id: "ev-seo-h1-valid",
         affectedTarget: "Heading Structure",
-        observation: `Single <h1> heading: "${cleanText(h1Matches[0][1]).slice(0, 60)}"`,
+        observation: `Single <h1> heading: "${h1Instances[0] || ""}"`,
         expectedCondition: "Single prominent <h1> heading",
         evidenceType: "dom-inspection",
       },
       title: "Single Clear <h1> Heading",
-      detail: `Primary topic defined by: "${cleanText(h1Matches[0][1]).slice(0, 60)}"`,
+      detail: `Primary topic defined by: "${h1Instances[0] || ""}"`,
     });
-  }
-
-  // Extract structured headings
-  const headings: { level: number; text: string }[] = [];
-  const headingMatches = htmlText.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi);
-  for (const match of headingMatches) {
-    const text = cleanText(match[2]).slice(0, 80);
-    if (text) {
-      headings.push({ level: parseInt(match[1], 10), text });
-    }
   }
 
   // Check for heading skips (e.g. h1 followed directly by h3 or h4)
@@ -456,7 +468,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
     });
   }
 
-  const robotsMatch = htmlText.match(/<meta\b[^>]*\bname=["']robots["'][^>]*\bcontent=["']([^"']*)["']/i);
+  const robots = extractRobotsMeta(root);
 
   const seoData: SeoInspection = {
     title: rawTitle,
@@ -464,7 +476,7 @@ export function auditSeo(contextOrHtml: AuditContext | string): SeoAuditResult {
     metaDescription: metaDesc,
     descriptionLength: descLength,
     canonicalUrl,
-    robots: robotsMatch ? robotsMatch[1].trim() : null,
+    robots,
     ogTitle,
     ogImage,
     h1Count,

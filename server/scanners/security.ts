@@ -1,5 +1,6 @@
 import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import { parseHtmlDocument, extractInsecureMixedContent } from "../htmlParser.ts";
 
 export interface SecurityAuditResult {
   findings: Finding[];
@@ -496,23 +497,8 @@ export function auditSecurity(
 
   // 9. Mixed Content Verification (ISSUE-019)
   if (isHttps) {
-    const mixedPatterns = [
-      /<script\b[^>]*\bsrc=["'](http:\/\/[^"']+)["']/gi,
-      /<link\b[^>]*\bhref=["'](http:\/\/[^"']+)["']/gi,
-      /<img\b[^>]*\bsrc=["'](http:\/\/[^"']+)["']/gi,
-      /<iframe\b[^>]*\bsrc=["'](http:\/\/[^"']+)["']/gi,
-      /<(?:video|audio|source)\b[^>]*\bsrc=["'](http:\/\/[^"']+)["']/gi,
-    ];
-    const insecureSources: string[] = [];
-
-    for (const pattern of mixedPatterns) {
-      const matches = htmlText.matchAll(pattern);
-      for (const m of matches) {
-        if (m[1] && !insecureSources.includes(m[1])) {
-          insecureSources.push(m[1]);
-        }
-      }
-    }
+    const root = parseHtmlDocument(htmlText);
+    const insecureSources = extractInsecureMixedContent(root);
 
     if (insecureSources.length > 0) {
       findings.push({

@@ -1,5 +1,12 @@
 import type { AccessibilityInspection, AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import {
+  parseHtmlDocument,
+  extractHtmlLanguage,
+  extractImageAccessibility,
+  extractFormLabels,
+  extractLandmarks,
+} from "../htmlParser.ts";
 
 export interface A11yAuditResult {
   summary: AccessibilityInspection;
@@ -10,8 +17,8 @@ export interface A11yAuditResult {
 /**
  * Audits accessibility compliance according to WCAG 2.1 AA baselines.
  * Consumes the shared authoritative AuditContext (Phase 2), with fallback to raw HTML string.
- * Fixed according to ISSUE-020 & ISSUE-021 (strictly verifies accessible names for inputs;
- * an input with only an `id` is properly recognized as unlabelled).
+ * Uses structured HTML parsing (Phase 4) to evaluate language attributes, image alternatives,
+ * form labelling (including nested labels and explicit for attributes), duplicate IDs, and landmarks.
  */
 export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAuditResult {
   const isCtx = isAuditContext(contextOrHtml);
@@ -20,18 +27,10 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 
-  // 1. Check <html lang="...">
-  const htmlTagMatch = htmlText.match(/<html\b[^>]*>/i);
-  let hasLang = false;
-  let langValue: string | null = null;
+  const root = parseHtmlDocument(htmlText);
 
-  if (htmlTagMatch) {
-    const langMatch = htmlTagMatch[0].match(/lang=["']([^"']+)["']/i);
-    if (langMatch && langMatch[1].trim()) {
-      hasLang = true;
-      langValue = langMatch[1].trim();
-    }
-  }
+  // 1. Check <html lang="...">
+  const { hasLang, lang: langValue, rawTag } = extractHtmlLanguage(root);
 
   if (!hasLang || !langValue) {
     findings.push({
@@ -45,11 +44,11 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
       description: "The root <html> element does not specify a valid 'lang' attribute.",
       whyItMatters:
         "Screen readers rely on the lang attribute to invoke correct text-to-speech pronunciation rules, accent models, and dictionary translation.",
-      evidence: htmlTagMatch ? htmlTagMatch[0] : "<html> tag missing lang attribute",
+      evidence: rawTag || "<html> tag missing lang attribute",
       structuredEvidence: {
         id: "ev-a11y-html-lang-missing",
         affectedTarget: "<html lang>",
-        observation: htmlTagMatch ? htmlTagMatch[0] : "<html> tag missing lang attribute",
+        observation: rawTag || "<html> tag missing lang attribute",
         expectedCondition: "Valid BCP 47 language code on <html> element",
         evidenceType: "dom-inspection",
       },
@@ -76,15 +75,7 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
   }
 
   // 2. Image alt attributes
-  const allImages = htmlText.match(/<img\b[^>]*>/gi) || [];
-  const missingAlt: string[] = [];
-
-  for (const img of allImages) {
-    // Check if alt attribute exists at all (even alt="" for decorative images is valid WCAG)
-    if (!/\balt\s*=\s*["'][^"']*["']/i.test(img)) {
-      missingAlt.push(img.replace(/\s+/g, " ").slice(0, 90));
-    }
-  }
+  const { totalImages, missingAlt } = extractImageAccessibility(root);
 
   if (missingAlt.length > 0) {
     findings.push({
@@ -114,7 +105,7 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
       instancesCount: missingAlt.length,
       instances: missingAlt.slice(0, 5),
     });
-  } else if (allImages.length > 0) {
+  } else if (totalImages > 0) {
     passedChecks.push({
       id: "a11y-images-alt-complete",
       category: "accessibility",
@@ -123,70 +114,17 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
       structuredEvidence: {
         id: "ev-a11y-images-alt-complete",
         affectedTarget: "HTML <img> Elements",
-        observation: `All ${allImages.length} images declare alt attributes`,
+        observation: `All ${totalImages} images declare alt attributes`,
         expectedCondition: "Zero images missing alt attributes",
         evidenceType: "dom-inspection",
       },
       title: "All Images Have Alt Attributes",
-      detail: `All ${allImages.length} images on the page declare alt attributes (informational or decorative).`,
+      detail: `All ${totalImages} images on the page declare alt attributes (informational or decorative).`,
     });
   }
 
-  // 3. Form input accessible labelling (ISSUE-021: id alone is not a label)
-  // Collect all IDs referenced by <label for="...">
-  const labelForIds = new Set<string>();
-  const labelMatches = htmlText.matchAll(/<label\b[^>]*\bfor=["']([^"']+)["'][^>]*>/gi);
-  for (const match of labelMatches) {
-    if (match[1]) {
-      labelForIds.add(match[1].trim());
-    }
-  }
-
-  // Find all inputs wrapped inside <label>...</label>
-  const wrappedInputStrings: string[] = [];
-  const wrappingLabelMatches = htmlText.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/gi);
-  for (const match of wrappingLabelMatches) {
-    const inner = match[1];
-    const inputsInLabel = inner.match(/<input\b[^>]*>/gi) || [];
-    for (const inp of inputsInLabel) {
-      wrappedInputStrings.push(inp);
-    }
-  }
-
-  const formInputs = htmlText.match(/<input\b[^>]*>/gi) || [];
-  let unlabelledInputs = 0;
-  const unlabelledSamples: string[] = [];
-
-  for (const input of formInputs) {
-    const typeMatch = input.match(/\btype=["']([^"']+)["']/i);
-    const type = typeMatch ? typeMatch[1].toLowerCase() : "text";
-    if (["hidden", "submit", "button", "reset", "image"].includes(type)) continue;
-
-    // Check for explicit ARIA accessible name
-    const ariaMatch = input.match(/\baria-label(?:ledby)?=["']([^"']*)["']/i);
-    const hasAria = Boolean(ariaMatch && ariaMatch[1].trim());
-
-    // Check for title attribute
-    const titleMatch = input.match(/\btitle=["']([^"']*)["']/i);
-    const hasTitle = Boolean(titleMatch && titleMatch[1].trim());
-
-    // Check if associated with an external <label for="id">
-    const idMatch = input.match(/\bid=["']([^"']+)["']/i);
-    const inputId = idMatch ? idMatch[1].trim() : null;
-    const hasAssociatedLabelFor = Boolean(inputId && labelForIds.has(inputId));
-
-    // Check if input is nested inside a <label>
-    const isWrappedInLabel = wrappedInputStrings.some((w) => w === input);
-
-    const hasAccessibleName = hasAria || hasTitle || hasAssociatedLabelFor || isWrappedInLabel;
-
-    if (!hasAccessibleName) {
-      unlabelledInputs++;
-      if (unlabelledSamples.length < 5) {
-        unlabelledSamples.push(input.replace(/\s+/g, " ").slice(0, 90));
-      }
-    }
-  }
+  // 3. Form input accessible labelling & Duplicate IDs (ISSUE-021)
+  const { totalInputs, unlabelledInputs, unlabelledSamples, duplicateIds } = extractFormLabels(root);
 
   if (unlabelledInputs > 0) {
     findings.push({
@@ -216,7 +154,7 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
       instancesCount: unlabelledInputs,
       instances: unlabelledSamples,
     });
-  } else if (formInputs.length > 0) {
+  } else if (totalInputs > 0) {
     passedChecks.push({
       id: "a11y-inputs-labelled",
       category: "accessibility",
@@ -234,9 +172,37 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
     });
   }
 
+  // Duplicate ID detection (WCAG 4.1.1)
+  if (duplicateIds.length > 0) {
+    findings.push({
+      id: "a11y-duplicate-ids",
+      category: "accessibility",
+      severity: "medium",
+      priority: "fix-first",
+      state: "confirmed",
+      confidence: "high",
+      title: "Duplicate HTML Element IDs Detected",
+      description: `Detected ${duplicateIds.length} duplicate 'id' attribute values (${duplicateIds.slice(0, 3).join(", ")}).`,
+      whyItMatters:
+        "Duplicate IDs break form label associations, anchor links, and assistive technology navigation that relies on unique element identifiers.",
+      evidence: `Duplicate IDs: ${duplicateIds.join(", ")}`,
+      structuredEvidence: {
+        id: "ev-a11y-duplicate-ids",
+        affectedTarget: "Document DOM",
+        observation: `Detected ${duplicateIds.length} duplicate element IDs: ${duplicateIds.join(", ")}`,
+        expectedCondition: "All element ID attributes are unique across document",
+        evidenceType: "dom-inspection",
+        metadata: { duplicateIds, count: duplicateIds.length },
+      },
+      affectedTarget: "Document DOM",
+      recommendation: "Ensure all 'id' attribute values are strictly unique within the HTML document.",
+      instancesCount: duplicateIds.length,
+      instances: duplicateIds,
+    });
+  }
+
   // 4. Landmarks: <main>, <header>, <nav>
-  const hasMain = /<main\b/i.test(htmlText) || /role=["']main["']/i.test(htmlText);
-  const hasHeader = /<header\b/i.test(htmlText) || /role=["']banner["']/i.test(htmlText);
+  const { hasMain, hasHeader } = extractLandmarks(root);
 
   if (!hasMain) {
     findings.push({
@@ -281,7 +247,7 @@ export function auditAccessibility(contextOrHtml: AuditContext | string): A11yAu
   }
 
   const summary: AccessibilityInspection = {
-    imagesTotal: allImages.length,
+    imagesTotal: totalImages,
     imagesMissingAlt: missingAlt.length,
     missingAltElements: missingAlt.slice(0, 5),
     hasLang,

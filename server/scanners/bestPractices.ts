@@ -1,11 +1,17 @@
 import type { AuditContext, Finding, PassedCheck } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import { parseHtmlDocument, extractDeprecatedTags, extractHtmlCharset } from "../htmlParser.ts";
 
 export interface BestPracticesAuditResult {
   findings: Finding[];
   passedChecks: PassedCheck[];
 }
 
+/**
+ * Audits technical and modern web best practices.
+ * Consumes the shared authoritative AuditContext (Phase 2), with fallback to raw HTML string.
+ * Uses structured HTML parsing (Phase 4) to verify charset declarations and deprecated markup tags.
+ */
 export function auditBestPractices(contextOrHtml: AuditContext | string): BestPracticesAuditResult {
   const isCtx = isAuditContext(contextOrHtml);
   const htmlText = isCtx ? contextOrHtml.body.text : (contextOrHtml as string);
@@ -13,7 +19,9 @@ export function auditBestPractices(contextOrHtml: AuditContext | string): BestPr
   const findings: Finding[] = [];
   const passedChecks: PassedCheck[] = [];
 
-  // 1. HTML5 Doctype Check
+  const root = parseHtmlDocument(htmlText);
+
+  // 1. HTML5 Doctype Check (Preamble declaration, non-DOM string check)
   const hasDoctype = /<!doctype\s+html\b/i.test(htmlText);
   if (!hasDoctype) {
     findings.push({
@@ -57,11 +65,11 @@ export function auditBestPractices(contextOrHtml: AuditContext | string): BestPr
     });
   }
 
-  // 2. Character Set UTF-8
-  const hasCharset = /<meta\b[^>]*charset=["']?utf-8["']?/i.test(htmlText) ||
-    /http-equiv=["']content-type["'][^>]*content=["'][^"']*charset=utf-8/i.test(htmlText);
+  // 2. Character Set UTF-8 Check
+  const charset = extractHtmlCharset(root);
+  const hasUtf8 = charset ? charset.toLowerCase() === "utf-8" : false;
 
-  if (!hasCharset) {
+  if (!hasUtf8) {
     findings.push({
       id: "bp-charset-missing",
       category: "best-practices",
@@ -104,15 +112,7 @@ export function auditBestPractices(contextOrHtml: AuditContext | string): BestPr
   }
 
   // 3. Obsolete / Deprecated HTML tags
-  const deprecatedTags = ["center", "font", "marquee", "blink", "frame", "frameset", "applet", "strike"];
-  const foundDeprecated: string[] = [];
-
-  for (const tag of deprecatedTags) {
-    const regex = new RegExp(`<${tag}\\b`, "i");
-    if (regex.test(htmlText)) {
-      foundDeprecated.push(`<${tag}>`);
-    }
-  }
+  const foundDeprecated = extractDeprecatedTags(root);
 
   if (foundDeprecated.length > 0) {
     findings.push({

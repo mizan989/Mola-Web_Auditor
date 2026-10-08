@@ -1,5 +1,10 @@
 import type { AuditContext, Finding, PassedCheck, PerformanceMetrics } from "../../types/audit.ts";
 import { isAuditContext } from "../context.ts";
+import {
+  parseHtmlDocument,
+  extractDiscoveredResourcesFromDom,
+  extractScripts,
+} from "../htmlParser.ts";
 
 export interface PerformanceAuditResult {
   metrics: PerformanceMetrics;
@@ -28,24 +33,20 @@ export function auditPerformance(
   const payloadKb = Math.round((contentLength / 1024) * 10) / 10;
 
   // Extract scripts, styles, images (or leverage context.discoveredResources if available)
-  const scripts = context?.discoveredResources
-    ? context.discoveredResources.scripts
-    : htmlText.match(/<script\b[^>]*>/gi) || [];
-  const stylesheets = context?.discoveredResources
-    ? context.discoveredResources.stylesheets
-    : htmlText.match(/<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi) || [];
-  const images = context?.discoveredResources
-    ? context.discoveredResources.images
-    : htmlText.match(/<img\b[^>]*>/gi) || [];
+  const root = parseHtmlDocument(htmlText);
+  const discovered = context?.discoveredResources || extractDiscoveredResourcesFromDom(root);
+  const scriptsCount = discovered.scripts.length;
+  const stylesheetsCount = discovered.stylesheets.length;
+  const imagesCount = discovered.images.length;
 
   const metrics: PerformanceMetrics = {
     ttfbMs: responseTimeMs,
     totalPayloadKb: payloadKb,
     compression: encoding,
     cacheControl,
-    scriptsCount: scripts.length,
-    stylesheetsCount: stylesheets.length,
-    imagesCount: images.length,
+    scriptsCount,
+    stylesheetsCount,
+    imagesCount,
   };
 
   // 1. TTFB / Response Latency
@@ -205,11 +206,14 @@ export function auditPerformance(
   }
 
   // 4. Render-blocking scripts in <head>
-  const headMatch = htmlText.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
-  if (headMatch) {
-    const headContent = headMatch[1];
-    const blockingScripts =
-      headContent.match(/<script\b(?![^>]*(?:async|defer|nomodule|type=["']module["']))[^>]*src=[^>]*>/gi) || [];
+  const scriptsInDoc = extractScripts(root);
+  const blockingScripts: string[] = [];
+
+  for (const s of scriptsInDoc) {
+    if (s.inHead && s.src && !s.isAsync && !s.isDefer && !s.isModule && !s.isNoModule) {
+      blockingScripts.push(s.src);
+    }
+  }
 
     if (blockingScripts.length > 0) {
       findings.push({
@@ -255,12 +259,20 @@ export function auditPerformance(
         detail: "No synchronous render-blocking scripts detected in document <head>.",
       });
     }
-  }
 
   // 5. Image dimension declaration (CLS reduction)
-  const imagesWithoutDimensions = images.filter(
-    (img) => !/width=["']\d+/i.test(img) || !/height=["']\d+/i.test(img)
-  );
+  const imgEls = root.querySelectorAll("img");
+  const imagesWithoutDimensions: string[] = [];
+
+  for (const img of imgEls) {
+    const width = img.getAttribute("width");
+    const height = img.getAttribute("height");
+    const hasWidth = Boolean(width && /^\d+/.test(width.trim()));
+    const hasHeight = Boolean(height && /^\d+/.test(height.trim()));
+    if (!hasWidth || !hasHeight) {
+      imagesWithoutDimensions.push(img.outerHTML ? img.outerHTML.replace(/\s+/g, " ").slice(0, 75) : "<img>");
+    }
+  }
 
   if (imagesWithoutDimensions.length > 0) {
     findings.push({

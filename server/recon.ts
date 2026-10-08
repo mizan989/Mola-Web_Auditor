@@ -10,54 +10,23 @@ import type {
 import { detectTechnologies } from "./scanners/tech.ts";
 import type { FetchResult } from "./scanners/http.ts";
 
+import {
+  parseHtmlDocument,
+  extractDiscoveredResourcesFromDom,
+  extractHtmlCharset,
+} from "./htmlParser.ts";
+
 /**
  * Extracts discovered subresources (scripts, stylesheets, images, iframes)
- * deterministically from bounded HTML text.
+ * deterministically from bounded HTML text using the structured HTML parser.
  */
 export function extractDiscoveredResources(htmlText: string): DiscoveredResources {
   if (!htmlText) {
     return { scripts: [], stylesheets: [], images: [], iframes: [] };
   }
 
-  const scripts: string[] = [];
-  const scriptMatches = htmlText.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of scriptMatches) {
-    if (m[1] && !scripts.includes(m[1])) {
-      scripts.push(m[1]);
-    }
-  }
-
-  const stylesheets: string[] = [];
-  const linkMatches = htmlText.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*\bhref=["']([^"']+)["']/gi);
-  for (const m of linkMatches) {
-    if (m[1] && !stylesheets.includes(m[1])) {
-      stylesheets.push(m[1]);
-    }
-  }
-  const linkMatchesRev = htmlText.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']stylesheet["']/gi);
-  for (const m of linkMatchesRev) {
-    if (m[1] && !stylesheets.includes(m[1])) {
-      stylesheets.push(m[1]);
-    }
-  }
-
-  const images: string[] = [];
-  const imgMatches = htmlText.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of imgMatches) {
-    if (m[1] && !images.includes(m[1])) {
-      images.push(m[1]);
-    }
-  }
-
-  const iframes: string[] = [];
-  const iframeMatches = htmlText.matchAll(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of iframeMatches) {
-    if (m[1] && !iframes.includes(m[1])) {
-      iframes.push(m[1]);
-    }
-  }
-
-  return { scripts, stylesheets, images, iframes };
+  const root = parseHtmlDocument(htmlText);
+  return extractDiscoveredResourcesFromDom(root);
 }
 
 export interface CollectReconParams {
@@ -129,15 +98,17 @@ export function collectReconnaissance(params: CollectReconParams): Reconnaissanc
   const characterLength = htmlText.length;
   const isTruncated = Boolean(httpResult.isTruncated);
 
+  const root = parseHtmlDocument(htmlText);
+
   let charset: string | undefined;
   const contentType = rawHeaders["content-type"] || "unknown";
   const contentTypeCharsetMatch = contentType.match(/charset=([^;]+)/i);
   if (contentTypeCharsetMatch) {
     charset = contentTypeCharsetMatch[1].trim();
   } else {
-    const metaCharsetMatch = htmlText.match(/<meta\b[^>]*\bcharset=["']?([^"'>\s]+)/i);
-    if (metaCharsetMatch) {
-      charset = metaCharsetMatch[1].trim();
+    const metaCharset = extractHtmlCharset(root);
+    if (metaCharset) {
+      charset = metaCharset;
     }
   }
 
