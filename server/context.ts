@@ -1,62 +1,14 @@
 import type {
   AuditContext,
   BoundedHttpResponse,
-  DiscoveredResources,
   AuditContextMetadata,
   DetectedTechnology,
 } from "../types/audit.ts";
 import { detectTechnologies } from "./scanners/tech.ts";
 import type { FetchResult } from "./scanners/http.ts";
+import { collectReconnaissance, extractDiscoveredResources } from "./recon.ts";
 
-/**
- * Extracts discovered subresources (scripts, stylesheets, images, iframes)
- * deterministically from bounded HTML text.
- */
-export function extractDiscoveredResources(htmlText: string): DiscoveredResources {
-  if (!htmlText) {
-    return { scripts: [], stylesheets: [], images: [], iframes: [] };
-  }
-
-  const scripts: string[] = [];
-  const scriptMatches = htmlText.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of scriptMatches) {
-    if (m[1] && !scripts.includes(m[1])) {
-      scripts.push(m[1]);
-    }
-  }
-
-  const stylesheets: string[] = [];
-  const linkMatches = htmlText.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*\bhref=["']([^"']+)["']/gi);
-  for (const m of linkMatches) {
-    if (m[1] && !stylesheets.includes(m[1])) {
-      stylesheets.push(m[1]);
-    }
-  }
-  const linkMatchesRev = htmlText.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']stylesheet["']/gi);
-  for (const m of linkMatchesRev) {
-    if (m[1] && !stylesheets.includes(m[1])) {
-      stylesheets.push(m[1]);
-    }
-  }
-
-  const images: string[] = [];
-  const imgMatches = htmlText.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of imgMatches) {
-    if (m[1] && !images.includes(m[1])) {
-      images.push(m[1]);
-    }
-  }
-
-  const iframes: string[] = [];
-  const iframeMatches = htmlText.matchAll(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/gi);
-  for (const m of iframeMatches) {
-    if (m[1] && !iframes.includes(m[1])) {
-      iframes.push(m[1]);
-    }
-  }
-
-  return { scripts, stylesheets, images, iframes };
-}
+export { extractDiscoveredResources, collectReconnaissance };
 
 /**
  * Type guard to identify an authoritative AuditContext.
@@ -136,12 +88,25 @@ export function buildAuditContext(params: BuildContextParams): AuditContext {
     validatedAddresses,
   };
 
+  const redirectChain = httpResult.info?.redirectChain || [targetUrl];
+
+  const recon = collectReconnaissance({
+    inputUrl: targetUrl,
+    normalizedUrl: targetUrl,
+    finalUrl,
+    redirectChain,
+    httpResult,
+    validatedAddresses,
+    discoveredResources,
+    technologySignals: technologyObservations,
+  });
+
   return {
     targetUrl,
     finalUrl,
     hostname,
     scanMode,
-    redirectChain: httpResult.info?.redirectChain || [targetUrl],
+    redirectChain,
     response,
     headers: httpResult.rawHeaders,
     body: {
@@ -158,6 +123,7 @@ export function buildAuditContext(params: BuildContextParams): AuditContext {
     technologyObservations,
     limitations,
     metadata,
+    recon,
   };
 }
 
@@ -203,6 +169,36 @@ export function createPartialAuditContext(params: PartialContextParams): AuditCo
     ? detectTechnologies(partialHeaders, partialHtml)
     : [];
 
+  const mockHttpResult: FetchResult = {
+    info: {
+      statusCode: 0,
+      statusText: "Connection Failed",
+      protocol: isHttps ? "HTTP/1.1 (TLS)" : "HTTP/1.1",
+      responseTimeMs: 0,
+      contentLength: partialHtml.length,
+      contentType: partialHeaders["content-type"] || "unknown",
+      isHttps,
+      redirectChain,
+      headers: partialHeaders,
+      isTruncated: true,
+    },
+    htmlText: partialHtml,
+    finalUrl: targetUrl,
+    rawHeaders: partialHeaders,
+    isTruncated: true,
+  };
+
+  const recon = collectReconnaissance({
+    inputUrl: targetUrl,
+    normalizedUrl: targetUrl,
+    finalUrl: targetUrl,
+    redirectChain,
+    httpResult: mockHttpResult,
+    validatedAddresses,
+    discoveredResources,
+    technologySignals: technologyObservations,
+  });
+
   return {
     targetUrl,
     finalUrl: targetUrl,
@@ -240,5 +236,6 @@ export function createPartialAuditContext(params: PartialContextParams): AuditCo
       failureReason,
       validatedAddresses,
     },
+    recon,
   };
 }

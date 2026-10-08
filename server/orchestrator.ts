@@ -213,8 +213,10 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     performanceMetrics: performance.metrics,
     seoData: seo.seoData,
     accessibilitySummary: accessibility.summary,
+    reconnaissance: context.recon,
   };
 }
 
 export { compareAuditResults } from "../lib/compare.ts";
 export { buildAuditContext, createPartialAuditContext, isAuditContext } from "./context.ts";
+export { collectReconnaissance, extractDiscoveredResources } from "./recon.ts";

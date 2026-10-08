@@ -78,6 +78,29 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     md += `\n`;
   }
 
+  // Reconnaissance Surface Map (Phase 3)
+  if (result.reconnaissance) {
+    const recon = result.reconnaissance;
+    md += `## Target Reconnaissance & Surface Map\n\n`;
+    md += `- **Host & Scheme**: \`${recon.target.scheme.toUpperCase()}\` on \`${recon.target.hostname}:${recon.target.port}\`\n`;
+    if (recon.target.ipAddresses && recon.target.ipAddresses.length > 0) {
+      md += `- **Resolved Addresses**: \`${recon.target.ipAddresses.join(", ")}\`\n`;
+    }
+    md += `- **Payload Size**: \`${recon.bodyMetadata.byteLength} bytes\` (${recon.bodyMetadata.characterLength} chars)${recon.bodyMetadata.isTruncated ? " *(Truncated at 2.5 MB limit)*" : ""}\n`;
+    if (recon.bodyMetadata.charset) {
+      md += `- **Encoding / Charset**: \`${recon.bodyMetadata.charset}\`\n`;
+    }
+    md += `- **Discovered Subresources**: Scripts: ${recon.discoveredResources.scripts.length}, Stylesheets: ${recon.discoveredResources.stylesheets.length}, Images: ${recon.discoveredResources.images.length}, Iframes: ${recon.discoveredResources.iframes.length}\n`;
+
+    if (recon.securityObservations.length > 0) {
+      md += `\n**Security Observations & Signals:**\n`;
+      for (const obs of recon.securityObservations) {
+        md += `- [${obs.provenance.toUpperCase()}] ${obs.observation}\n`;
+      }
+    }
+    md += `\n`;
+  }
+
   // Findings
   md += `## Prioritized Action Items\n\n`;
 

@@ -143,6 +143,7 @@ export interface ScanResult {
   performanceMetrics: PerformanceMetrics;
   seoData: SeoInspection;
   accessibilitySummary: AccessibilityInspection;
+  reconnaissance?: ReconnaissanceMap;
 }
 
 export interface VerificationComparison {
@@ -205,4 +206,55 @@ export interface AuditContext {
   technologyObservations: DetectedTechnology[];
   limitations: string[];
   metadata: AuditContextMetadata;
+  recon?: ReconnaissanceMap;
+}
+
+export interface ReconTargetInfo {
+  inputUrl: string;
+  normalizedUrl: string;
+  finalUrl: string;
+  hostname: string;
+  scheme: "http" | "https";
+  port: number;
+  ipAddresses?: string[];
+}
+
+export interface ReconRedirectHop {
+  hopNumber: number;
+  url: string;
+}
+
+export interface ReconBodyMetadata {
+  byteLength: number;
+  characterLength: number;
+  isTruncated: boolean;
+  maxBodyLimitBytes: number;
+  contentType: string;
+  charset?: string;
+  hasHtmlDoctype: boolean;
+}
+
+export interface ReconSecurityObservation {
+  type: string;
+  observation: string;
+  provenance: "header" | "transport" | "html" | "redirect";
+  severity?: "info" | "warning";
+}
+
+export interface ReconnaissanceMap {
+  target: ReconTargetInfo;
+  redirectChain: ReconRedirectHop[];
+  status: {
+    code: number;
+    text: string;
+    protocol: string;
+    ttfbMs: number;
+  };
+  headers: Record<string, string>;
+  bodyMetadata: ReconBodyMetadata;
+  discoveredResources: DiscoveredResources;
+  technologySignals: DetectedTechnology[];
+  securityObservations: ReconSecurityObservation[];
+  limitations: string[];
+  collectedAt: string;
 }
