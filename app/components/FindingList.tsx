@@ -50,7 +50,7 @@ export function FindingList({
       {/* HTTP Inspection & Headers Explorer */}
       <div className="pt-6 border-t border-[var(--border)]">
         <div
-          className="flex items-center justify-between cursor-pointer select-none"
+          className="flex items-center justify-between cursor-pointer select-none rounded-xl p-1 -m-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--deep)]"
           onClick={() => setShowHeaders(!showHeaders)}
           role="button"
           tabIndex={0}
@@ -89,7 +89,7 @@ export function FindingList({
       {/* Passing Checks Accordion */}
       <div className="pt-4 border-t border-[var(--border)]">
         <div
-          className="flex items-center justify-between cursor-pointer select-none"
+          className="flex items-center justify-between cursor-pointer select-none rounded-xl p-1 -m-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--deep)]"
           onClick={() => setShowPassed(!showPassed)}
           role="button"
           tabIndex={0}

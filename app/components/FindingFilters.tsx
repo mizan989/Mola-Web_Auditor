@@ -82,7 +82,7 @@ export function FindingFilters({
             <button
               type="button"
               onClick={onClearFilters}
-              className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-white/60 text-xs font-semibold text-[var(--muted)] hover:text-[var(--dark)] flex items-center gap-1 transition-all"
+              className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-white/60 text-xs font-semibold text-[var(--muted)] hover:text-[var(--dark)] flex items-center gap-1 transition-all focus-visible:ring-2 focus-visible:ring-[var(--deep)]"
               title="Reset all filters and search query"
             >
               <X className="w-3.5 h-3.5" />

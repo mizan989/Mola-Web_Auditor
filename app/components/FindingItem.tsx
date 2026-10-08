@@ -44,7 +44,7 @@ export function FindingItem({ finding, isExpanded, onToggleExpand }: FindingItem
     >
       {/* 1. Header with Severity/Status & Title & Explanation */}
       <div
-        className="flex items-start justify-between gap-4 cursor-pointer select-none"
+        className="flex items-start justify-between gap-4 cursor-pointer select-none rounded-xl p-1 -m-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--deep)]"
         onClick={onToggleExpand}
         role="button"
         tabIndex={0}

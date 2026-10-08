@@ -29,9 +29,3 @@ Thumbs.db
 # Agent configurations
 .agents/
 skills-lock.json
-
-# Markdown files (all ignored except README.md)
-*.md
-**/*.md
-!README.md
-!readme.md

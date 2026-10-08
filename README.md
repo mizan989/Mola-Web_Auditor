@@ -27,10 +27,20 @@
 <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind-CSS%20v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
 <a href="https://antideploy.com"><img src="https://img.shields.io/badge/Deployed%20on-Antideploy-38B2AC?style=flat-square" alt="Antideploy"></a>
 
+<a href="PRD.md"><img src="https://img.shields.io/badge/PRD-Documented-06141B?style=flat-square" alt="PRD"></a>
+<a href="RULES.md"><img src="https://img.shields.io/badge/Rules-Strict-06141B?style=flat-square" alt="Rules"></a>
+<a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Verified-06141B?style=flat-square" alt="Architecture"></a>
+<a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-SSRF%20Hardened-06141B?style=flat-square" alt="Security"></a>
+<a href="DESIGN.md"><img src="https://img.shields.io/badge/Design-System-06141B?style=flat-square" alt="Design"></a>
+<a href="issues.md"><img src="https://img.shields.io/badge/Issues-ISSUE--001%20to%20050-06141B?style=flat-square" alt="Issues Ledger"></a>
+
 </div>
 
 > [!TIP]
 > **Live Web Auditor Ready!** Audit any public website live at **[mola.antideploy.app](https://mola.antideploy.app)** to receive concrete evidence, HTTP telemetry, and one-click `issues.md` exports for AI coding assistants (Gemini, Claude, Cursor) — [Get started locally in under 60 seconds](#-quick-start).
+>
+> 📖 **Governance & Specifications**:
+> [Product Requirements (`PRD.md`)](PRD.md) · [Engineering Rules (`RULES.md`)](RULES.md) · [System Architecture (`ARCHITECTURE.md`)](ARCHITECTURE.md) · [Security & Threat Model (`SECURITY.md`)](SECURITY.md) · [Design System (`DESIGN.md`)](DESIGN.md) · [Issue Ledger (`issues.md`)](issues.md)
 
 ---
 
@@ -49,8 +59,9 @@ $$\text{Enter URL} \longrightarrow \text{Validate SSRF} \longrightarrow \text{In
 - **Deep HTTP & Infrastructure Telemetry** — Inspects TTFB latency, TLS protocols, HTTP compression (Brotli/Gzip/Zstandard), redirect chains, and server headers
 - **Automated Technology Fingerprinting** — Detects underlying frameworks (Next.js, React, Vue, Nuxt), CDNs (Cloudflare, Vercel, Netlify), and CMS engines
 - **AI-Ready `issues.md` Artifact Generation** — One-click download or copy of structured Markdown reports specifically engineered to prompt AI coding agents (Gemini, Claude, Cursor, Copilot)
-- **Fix Verification & Rescan Diffing** — Re-auditing a site compares subsequent scan runs against previous baselines, clearly segregating `🟢 Resolved`, `🟡 Remaining`, and `🔴 New Issues`
-- **SSRF-Hardened Network Architecture** — Built-in RFC 1918 private IP range blocking, loopback mitigation, cloud metadata (`169.254.169.254`) isolation, and domain guardrails
+- **Fix Verification & Rescan Diffing** — Re-auditing a site compares subsequent scan runs against previous baselines, clearly segregating `Fixed`, `Still Present`, `Changed`, `New`, and `Unable to Verify` findings
+- **SSRF-Hardened Network Architecture** — Built-in RFC 1918 private IP range blocking, loopback mitigation, cloud metadata (`169.254.169.254`) isolation, connection-time DNS rebinding defense, and hop-by-hop redirect validation
+- **Deterministic Check Coverage** — Explicitly distinguishes "not found" (clean pass) from "not checked" (unsupported or limited) without arbitrary percentage figures
 - **Ephemeral In-Memory Scanning** — Audits are executed ephemerally in memory without application database persistence or tracking cookies. Note that upstream hosting infrastructure or edge CDNs may retain standard operational access logs.
 - **Quiet Developer Aesthetic** — Minimalist editorial layout, high-contrast typography, and full-viewport section views optimized for desktop and mobile
 
@@ -269,19 +280,21 @@ Traditional audit suites rely on synthetic scores that reward superficial optimi
 ### SSRF-Hardened Security Architecture
 
 Auditing arbitrary URLs poses severe Server-Side Request Forgery risks. Mola implements hardened defense-in-depth controls:
-- **Protocol & Port Restrictions**: Only `http:` and `https:` schemes with standard ports (80, 443) are permitted. Schemes such as `file:`, `ftp:`, `data:`, and `javascript:` as well as arbitrary ports are rejected.
-- **SSRF Redirect Traversal Protection**: Redirects are manually followed and validated hop-by-hop (up to 5 maximum redirects); every destination undergoes strict IP and DNS re-validation to prevent private redirection.
-- **Private IP & DNS Rebinding Defenses**: Centralized validation strictly blocks RFC 1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), carrier-grade NAT (`100.64.0.0/10`), link-local (`169.254.0.0/16`), loopback (`127.0.0.0/8`), IPv6 unique local (`fc00::/7`), link-local (`fe80::/10`), and IPv4-mapped IPv6 ranges. All resolved addresses from DNS are verified.
-- **Resource & Concurrency Limits**: Strict 15-second operation deadlines, 2.5MB response body streaming caps, 4KB request body limits, 15 requests/min per IP rate limiting, and 5 concurrent active scan limits prevent resource exhaustion.
+- **Protocol & Port Restrictions**: Only `http:` and `https:` schemes with standard ports (80, 443) are permitted. Schemes such as `file:`, `ftp:`, `data:`, and `javascript:` as well as non-standard ports are rejected. Embedded credentials (`user:pass@host`) and single-label hostnames are blocked.
+- **Connection-Time DNS Rebinding Defense**: Centralized validation resolves all A and AAAA records via a 5,000ms bounded lookup, strictly blocking RFC 1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), carrier-grade NAT (`100.64.0.0/10`), link-local and cloud metadata (`169.254.0.0/16`), loopback (`127.0.0.0/8`, `::1`), IPv6 unique local (`fc00::/7`), and IPv4-mapped IPv6 ranges. Socket connection hooks bind the socket to the pre-validated public IP address to prevent TOCTOU DNS rebinding.
+- **SSRF Redirect Traversal Protection**: Redirects are manually followed and validated hop-by-hop (up to 5 maximum redirects); every destination undergoes full URL, IP, and DNS re-validation before establishing the next socket.
+- **Resource & Concurrency Limits**: Strict 15-second operation deadlines, 10-second per-hop socket timeouts, 2.5MB response body streaming caps with clean socket destruction, 4KB request body limits, 15 requests/min per IP rate limiting (prioritizing `CF-Connecting-IP` and `X-Real-IP`), and 5 concurrent active scan limits prevent resource exhaustion.
+- **Authoritative Nonce CSP**: Per-request cryptographic nonces and `strict-dynamic` enforced via `middleware.ts`, eliminating `'unsafe-inline'` script vulnerabilities.
 
 ### Scan Modes: Quick Scan vs. Deep Scan
 
 Mola provides two genuinely differentiated scan modes:
-- **Quick Scan**: Fast, lightweight static document and network inspection. Collects HTTP telemetry (TTFB, protocol, status), response security headers, HTML document hygiene (titles, descriptions, canonicals, heading hierarchy), basic accessibility landmarks, and signature-verified technology detection.
-- **Deep Scan**: Comprehensive audit expanding upon Quick Scan with in-depth static document checks:
-  - **Subresource Integrity (SRI)**: Audits external third-party `<script>` tags for missing `integrity` attributes.
-  - **Cookie Security Attributes**: Evaluates `Set-Cookie` directives for `Secure`, `HttpOnly`, and `SameSite` flags.
+- **Quick Scan**: Fast, lightweight server-side HTTP and static DOM inspection. Measures TTFB latency, HTTP compression, TLS status, security response headers, HTML document hygiene (titles, descriptions, canonicals, heading hierarchy), accessibility landmarks, and signature-verified technology detection.
+- **Deep Scan**: Comprehensive audit expanding upon Quick Scan with in-depth security and runtime checks:
+  - **Subresource Integrity (SRI)**: Audits external third-party `<script>` tags for cryptographic `integrity` and `crossorigin` attributes.
+  - **Cookie Security Attributes**: Evaluates `Set-Cookie` directives for `Secure`, `HttpOnly`, and `SameSite` flags, plus cookie prefix compliance.
   - **Iframe Sandboxing & Lazy Loading**: Inspects `<iframe>` elements for `sandbox` policies and `loading="lazy"` attributes.
+  - **Isolated Browser Execution**: When headless browser runtimes (Chromium/Playwright) are available in the host environment, executes sandboxed navigation under strict timeouts and SSRF controls to observe dynamically rendered DOM elements and runtime network subresources. When unsupported, reports transparent limitations rather than fabricating results.
 
 ---
 
@@ -347,20 +360,29 @@ d:/PROJECTS/Mola/
 │   │   ├── HeroSection.tsx       # Focused URL input & scan controls
 │   │   ├── ReportSummary.tsx     # Audit metadata & severity breakdown
 │   │   ├── ScanProgress.tsx      # Stage-based deterministic progress indicator
-│   │   └── VerificationSection.tsx # 4-way Fix Verification presentation
+│   │   └── VerificationSection.tsx # 5-way Fix Verification presentation
 │   ├── globals.css               # Design tokens & Tailwind CSS v4 setup
-│   ├── layout.tsx                # Root layout, metadata & brand navbar
-│   └── page.tsx                  # Interactive Auditor application UI
+│   ├── layout.tsx                # Root layout with dynamic nonce header consumption
+│   ├── page.tsx                  # Interactive Auditor application UI
+│   ├── privacy/page.tsx          # Privacy policy documentation
+│   └── terms/page.tsx            # Terms of service documentation
 ├── assets/
 │   ├── logo.png                  # High-resolution brand mark (512x512)
 │   ├── screenshot1.png           # Hero UI preview
 │   └── screenshot2.png           # Telemetry & verification UI preview
 ├── lib/
-│   ├── compare.ts                # Semantic finding comparison engine
+│   ├── compare.ts                # Semantic 5-state finding comparison engine
 │   ├── exportJson.ts             # JSON export & file download helpers
-│   └── exportMarkdown.ts         # issues.md Markdown generator
+│   └── exportMarkdown.ts         # AI-ready issues.md Markdown generator
 ├── server/
+│   ├── browser.ts                # Isolated browser runner adapter & runtime checks
+│   ├── context.ts                # AuditContext construction & resource discovery
+│   ├── coverage.ts               # Deterministic check coverage & limitation tracking
+│   ├── evidenceEngine.ts         # Reusable evidence formatting & 6-question constructors
+│   ├── htmlParser.ts             # Lightweight DOM AST parser
 │   ├── orchestrator.ts           # Scan pipeline & verification comparator
+│   ├── modules/
+│   │   └── index.ts              # 11 unified domain audit modules
 │   ├── scanners/
 │   │   ├── a11y.ts               # Accessibility (alt, lang, form labels)
 │   │   ├── bestPractices.ts      # Doctype, UTF-8, deprecated markup
@@ -371,7 +393,7 @@ d:/PROJECTS/Mola/
 │   │   ├── seo.ts                # Title, meta description, canonical, h1-h6
 │   │   └── tech.ts               # Evidence-based technology detection
 │   └── validators/
-│       ├── dns.ts                # Multi-record DNS resolution & rebinding defense
+│       ├── dns.ts                # Bounded DNS resolution & rebinding defense
 │       ├── ip.ts                 # Centralized IPv4 & IPv6 SSRF validator
 │       └── url.ts                # URL syntax, protocol, and port validator
 ├── tests/
@@ -380,15 +402,19 @@ d:/PROJECTS/Mola/
 │   ├── exports.test.ts           # issues.md & verification markdown tests
 │   ├── ip-validation.test.ts     # IPv4 & IPv6 SSRF range tests
 │   ├── limits-redirects.test.ts  # Resource & redirect limit tests
+│   ├── security-architecture.test.ts # Adversarial security test suite (37 tests)
 │   ├── tech-detection.test.ts    # Technology heuristic & evidence tests
 │   └── url-validation.test.ts    # URL & port restriction unit tests
 ├── types/
 │   └── audit.ts                  # Finding, Result & Verification schemas
-├── eslint.config.mjs             # ESLint configuration
-├── LICENSE                       # MIT License
-├── next.config.ts                # Next.js security headers configuration
-├── package.json                  # Dependencies & scripts
-├── tsconfig.json                 # Strict TypeScript configuration
+├── ARCHITECTURE.md               # System architecture and data pipeline design
+├── DESIGN.md                     # Design tokens, typography, and a11y guidelines
+├── issues.md                     # Issue resolution ledger (ISSUE-001 to ISSUE-050)
+├── middleware.ts                 # Authoritative nonce-based Content-Security-Policy
+├── next.config.ts                # Next.js security headers & build configuration
+├── PRD.md                        # Product Requirements Document
+├── RULES.md                      # Engineering and architecture rules
+├── SECURITY.md                   # Security policy, threat model, and protections
 └── README.md                     # Project overview & documentation
 ```
 
