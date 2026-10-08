@@ -74,6 +74,8 @@ describe("Phase 0 — Audit Workflow & Orchestrator Verification", () => {
       assert.ok(f.category, "finding must have a category");
       assert.ok(f.severity, "finding must have a severity");
       assert.ok(f.priority, "finding must have a priority");
+      assert.ok(f.state, "finding must have a state");
+      assert.ok(f.confidence, "finding must have a confidence");
       assert.ok(f.evidence !== undefined, "finding must have evidence");
       assert.ok(f.whyItMatters, "finding must explain why it matters");
       assert.ok(f.recommendation, "finding must include recommendation");
@@ -142,6 +144,8 @@ describe("Phase 0 — Audit Workflow & Orchestrator Verification", () => {
           category: "security",
           severity: "high",
           priority: "critical",
+          state: "confirmed",
+          confidence: "high",
           title: "Missing HSTS",
           description: "Strict-Transport-Security header is missing",
           whyItMatters: "Prevents SSL stripping",
@@ -154,6 +158,8 @@ describe("Phase 0 — Audit Workflow & Orchestrator Verification", () => {
           category: "performance",
           severity: "medium",
           priority: "fix-first",
+          state: "confirmed",
+          confidence: "high",
           title: "Missing compression",
           description: "No compression header",
           whyItMatters: "Increases bandwidth",

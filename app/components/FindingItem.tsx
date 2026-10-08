@@ -66,6 +66,22 @@ export function FindingItem({ finding, isExpanded, onToggleExpand }: FindingItem
               <SeverityIcon className="w-3 h-3" />
               <span>{finding.severity.toUpperCase()}</span>
             </span>
+            {finding.confidence && (
+              <span
+                className="px-2 py-0.5 rounded-md border border-[var(--border)] bg-black/5 text-[var(--dark)] font-bold"
+                aria-label={`Confidence: ${finding.confidence.toUpperCase()}`}
+              >
+                {finding.confidence.toUpperCase()} CONFIDENCE
+              </span>
+            )}
+            {finding.state && finding.state !== "confirmed" && (
+              <span
+                className="px-2 py-0.5 rounded-md border border-[var(--border)] bg-amber-500/10 text-amber-700 font-bold"
+                aria-label={`State: ${finding.state}`}
+              >
+                {finding.state.replace("_", " ").toUpperCase()}
+              </span>
+            )}
             <span>·</span>
             <span className="font-bold text-[var(--dark)]">{finding.category.toUpperCase()}</span>
             <span>·</span>
@@ -103,6 +119,40 @@ export function FindingItem({ finding, isExpanded, onToggleExpand }: FindingItem
               {finding.evidence}
             </pre>
           </div>
+
+          {/* Structured Evidence Details */}
+          {finding.structuredEvidence && (
+            <div className="p-3 rounded-xl bg-black/5 border border-[var(--border)] space-y-1.5 text-xs">
+              <span className="font-extrabold uppercase tracking-wider text-[10px] text-[var(--muted)] block">
+                Evidence Details
+              </span>
+              {finding.structuredEvidence.expectedCondition && (
+                <div className="text-[11px]">
+                  <span className="font-semibold text-[var(--dark)]">Expected: </span>
+                  <span className="text-[var(--text-primary)]">{finding.structuredEvidence.expectedCondition}</span>
+                </div>
+              )}
+              {finding.structuredEvidence.evidenceType && (
+                <div className="text-[11px]">
+                  <span className="font-semibold text-[var(--dark)]">Type: </span>
+                  <code className="text-[var(--muted)]">{finding.structuredEvidence.evidenceType}</code>
+                </div>
+              )}
+              {finding.structuredEvidence.limitations && (
+                <div className="text-[11px] text-amber-800">
+                  <span className="font-semibold">Limitation: </span>
+                  <span>{finding.structuredEvidence.limitations}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {finding.limitations && !finding.structuredEvidence?.limitations && (
+            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px]">
+              <span className="font-semibold">Limitation: </span>
+              <span>{finding.limitations}</span>
+            </div>
+          )}
 
           {/* Affected Target Resource */}
           {finding.affectedTarget && (

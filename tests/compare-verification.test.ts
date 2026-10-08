@@ -9,6 +9,8 @@ function createMockFinding(overrides: Partial<Finding>): Finding {
     category: "security",
     severity: "high",
     priority: "critical",
+    state: "confirmed",
+    confidence: "high",
     title: "Strict-Transport-Security (HSTS) Header Missing",
     description: "The server did not send an HSTS header.",
     whyItMatters: "Allows SSL stripping attacks.",

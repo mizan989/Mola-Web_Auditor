@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import type {
   Finding,
   FindingCategory,
+  FindingConfidence,
   FindingPriority,
+  FindingState,
   PassedCheck,
   ScanResult,
 } from "../types/audit.ts";
@@ -90,13 +92,25 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       category: "performance",
       severity: "low",
       priority: "investigate",
+      state: "observation",
+      confidence: "high",
       title: "Document Payload Exceeded Inspection Limit",
       description: "The remote document body exceeded the maximum 2.5 MB inspection limit and was safely capped.",
       whyItMatters:
         "Extremely large HTML payloads degrade mobile network performance, CPU parsing time, and memory usage.",
       evidence: `Body stream reached maximum size limit (2.5 MB); parsing terminated safely`,
+      structuredEvidence: {
+        id: "ev-perf-payload-truncated",
+        sourceUrl: finalUrl,
+        affectedTarget: "HTTP Response Body",
+        observation: "Body stream reached maximum size limit (2.5 MB); parsing terminated safely.",
+        expectedCondition: "HTML payload within bounded stream inspection limit (<= 2.5 MB)",
+        evidenceType: "stream-limit-inspection",
+        limitations: "Document inspection truncated at 2.5 MB; downstream DOM nodes beyond this limit were not inspected.",
+      },
       affectedTarget: "HTTP Response Body",
       recommendation: "Ensure initial server-rendered HTML documents remain under 1 MB.",
+      limitations: "Document inspection truncated at 2.5 MB; downstream DOM nodes beyond this limit were not inspected.",
     });
   }
 
@@ -125,6 +139,21 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     "best-practices": 0,
   };
 
+  const stateCounts: Record<FindingState, number> = {
+    confirmed: 0,
+    not_detected: 0,
+    unable_to_check: 0,
+    failed: 0,
+    observation: 0,
+    recommendation: 0,
+  };
+
+  const confidenceCounts: Record<FindingConfidence, number> = {
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+
   let highCount = 0;
   let mediumCount = 0;
   let lowCount = 0;
@@ -134,6 +163,13 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     if (f.severity === "high") highCount++;
     else if (f.severity === "medium") mediumCount++;
     else if (f.severity === "low") lowCount++;
+
+    if (f.state) {
+      stateCounts[f.state] = (stateCounts[f.state] || 0) + 1;
+    }
+    if (f.confidence) {
+      confidenceCounts[f.confidence] = (confidenceCounts[f.confidence] || 0) + 1;
+    }
   }
 
   const scanDurationMs = Date.now() - startTime;
@@ -157,6 +193,8 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
       lowCount,
       passedCount: allPassed.length,
       categoryCounts,
+      stateCounts,
+      confidenceCounts,
     },
     findings: allFindings,
     passedChecks: allPassed,

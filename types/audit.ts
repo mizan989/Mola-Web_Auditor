@@ -9,20 +9,45 @@ export type FindingSeverity = "high" | "medium" | "low";
 
 export type FindingPriority = "critical" | "fix-first" | "recommended" | "investigate";
 
+export type FindingConfidence = "high" | "medium" | "low";
+
+export type FindingState =
+  | "confirmed"
+  | "not_detected"
+  | "unable_to_check"
+  | "failed"
+  | "observation"
+  | "recommendation";
+
+export interface StructuredEvidence {
+  id?: string;
+  sourceUrl?: string;
+  affectedTarget?: string;
+  observation: string;
+  expectedCondition?: string;
+  evidenceType?: string;
+  metadata?: Record<string, unknown>;
+  limitations?: string;
+}
+
 export interface Finding {
   id: string;
   category: FindingCategory;
   severity: FindingSeverity;
   priority: FindingPriority;
+  state: FindingState;
+  confidence: FindingConfidence;
   title: string;
   description: string;
   whyItMatters: string;
   evidence: string;
+  structuredEvidence?: StructuredEvidence;
   affectedTarget?: string;
   recommendation: string;
   codeSnippet?: string;
   instancesCount?: number;
   instances?: string[];
+  limitations?: string;
 }
 
 export interface PassedCheck {
@@ -30,6 +55,9 @@ export interface PassedCheck {
   category: FindingCategory;
   title: string;
   detail: string;
+  state?: FindingState;
+  confidence?: FindingConfidence;
+  structuredEvidence?: StructuredEvidence;
 }
 
 export interface DetectedTechnology {
@@ -105,6 +133,8 @@ export interface ScanResult {
     lowCount: number;
     passedCount: number;
     categoryCounts: Record<FindingCategory, number>;
+    stateCounts?: Record<FindingState, number>;
+    confidenceCounts?: Record<FindingConfidence, number>;
   };
   findings: Finding[];
   passedChecks: PassedCheck[];

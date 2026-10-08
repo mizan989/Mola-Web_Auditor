@@ -34,6 +34,18 @@ export function generateIssuesMarkdown(result: ScanResult): string {
   md += `> - Scanned: ${dateStr}\n`;
   md += `> - Mode: ${scanMode.toUpperCase()} Scan (${completeness === "full" ? "Complete" : "Partial"})\n`;
   md += `> - Total Findings: **${summary.totalFindings}** (High: ${summary.highCount}, Medium: ${summary.mediumCount}, Low: ${summary.lowCount})\n`;
+  if (summary.confidenceCounts) {
+    md += `> - Confidence: High: ${summary.confidenceCounts.high}, Medium: ${summary.confidenceCounts.medium}, Low: ${summary.confidenceCounts.low}\n`;
+  }
+  if (summary.stateCounts) {
+    const nonConfirmed = Object.entries(summary.stateCounts)
+      .filter(([k, v]) => k !== "confirmed" && v > 0)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    if (nonConfirmed) {
+      md += `> - Finding States: ${nonConfirmed}\n`;
+    }
+  }
   md += `> - Passed Checks: **${summary.passedCount}**\n\n`;
 
   // Technologies
@@ -75,8 +87,12 @@ export function generateIssuesMarkdown(result: ScanResult): string {
     findings.forEach((finding, idx) => {
       const sevBadge = finding.severity.toUpperCase();
       const priorityLabel = finding.priority.replace("-", " ").toUpperCase();
+      const stateBadge = (finding.state || "confirmed").toUpperCase();
+      const confidenceBadge = (finding.confidence || "high").toUpperCase();
 
       md += `### ${idx + 1}. [${sevBadge}] ${finding.title}\n\n`;
+      md += `- **State**: \`${stateBadge}\`\n`;
+      md += `- **Confidence**: \`${confidenceBadge}\`\n`;
       md += `- **Category**: \`${finding.category}\`\n`;
       md += `- **Priority**: \`${priorityLabel}\`\n`;
       if (finding.affectedTarget) {
@@ -86,6 +102,20 @@ export function generateIssuesMarkdown(result: ScanResult): string {
       md += `- **Why It Matters**: ${finding.whyItMatters}\n\n`;
 
       md += `**Concrete Evidence:**\n\`\`\`text\n${finding.evidence}\n\`\`\`\n\n`;
+
+      if (finding.structuredEvidence) {
+        const se = finding.structuredEvidence;
+        md += `**Structured Evidence:**\n`;
+        if (se.observation) md += `- **Observation**: ${se.observation}\n`;
+        if (se.expectedCondition) md += `- **Expected**: ${se.expectedCondition}\n`;
+        if (se.evidenceType) md += `- **Evidence Type**: \`${se.evidenceType}\`\n`;
+        if (se.sourceUrl) md += `- **Source URL**: \`${se.sourceUrl}\`\n`;
+        if (se.affectedTarget) md += `- **Target**: \`${se.affectedTarget}\`\n`;
+        if (se.limitations) md += `- **Limitations**: ${se.limitations}\n`;
+        md += `\n`;
+      } else if (finding.limitations) {
+        md += `**Limitations:** ${finding.limitations}\n\n`;
+      }
 
       md += `**Recommended Fix:**\n${finding.recommendation}\n\n`;
 
@@ -101,7 +131,8 @@ export function generateIssuesMarkdown(result: ScanResult): string {
   if (passedChecks.length > 0) {
     md += `## Verified Passing Checks\n\n`;
     for (const check of passedChecks) {
-      md += `- [x] **[${check.category}]** ${check.title}: ${check.detail}\n`;
+      const stateBadge = check.state && check.state !== "confirmed" ? ` [${check.state.toUpperCase()}]` : "";
+      md += `- [x] **[${check.category}]**${stateBadge} ${check.title}: ${check.detail}\n`;
     }
     md += `\n`;
   }
