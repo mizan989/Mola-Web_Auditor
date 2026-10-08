@@ -81,8 +81,8 @@ export function auditPerformance(
       category: "performance",
       severity: "medium",
       priority: "recommended",
-      state: "confirmed",
-      confidence: "high",
+      state: "observation",
+      confidence: "medium",
       title: "Elevated Server Response Time",
       description: `Initial response time was ${responseTimeMs}ms (optimal is <300ms).`,
       whyItMatters:

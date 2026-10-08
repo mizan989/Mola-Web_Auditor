@@ -18,6 +18,7 @@ import { auditAccessibility } from "./scanners/a11y.ts";
 import { auditBestPractices } from "./scanners/bestPractices.ts";
 import { auditDeepScan } from "./scanners/deep.ts";
 import { normalizeTraceableFinding } from "./evidenceEngine.ts";
+import { enforceEvidenceQuality } from "./evidenceQuality.ts";
 
 export interface ScanOptions {
   url: string;
@@ -133,8 +134,10 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
     ...deepPassed,
   ];
 
-  // Step 6: First-Class Evidence Normalization (Phase 6)
-  const traceableFindings: Finding[] = allFindings.map((f) => normalizeTraceableFinding(f, context.finalUrl));
+  // Step 6: First-Class Evidence Normalization & Quality Rules (Phase 6 & Phase 7)
+  const traceableFindings: Finding[] = allFindings
+    .map((f) => normalizeTraceableFinding(f, context.finalUrl))
+    .map(enforceEvidenceQuality);
 
   // Step 7: Sort findings deterministically by Severity then Priority
   traceableFindings.sort((a, b) => {

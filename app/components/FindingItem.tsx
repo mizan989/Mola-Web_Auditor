@@ -74,14 +74,21 @@ export function FindingItem({ finding, isExpanded, onToggleExpand }: FindingItem
                 {finding.confidence.toUpperCase()} CONFIDENCE
               </span>
             )}
-            {finding.state && finding.state !== "confirmed" && (
+            {finding.state === "observation" ? (
+              <span
+                className="px-2 py-0.5 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 font-bold"
+                aria-label="State: Uncertain Observation"
+              >
+                OBSERVATION
+              </span>
+            ) : finding.state && finding.state !== "confirmed" ? (
               <span
                 className="px-2 py-0.5 rounded-md border border-[var(--border)] bg-amber-500/10 text-amber-700 font-bold"
                 aria-label={`State: ${finding.state}`}
               >
                 {finding.state.replace("_", " ").toUpperCase()}
               </span>
-            )}
+            ) : null}
             <span>·</span>
             <span className="font-bold text-[var(--dark)]">{finding.category.toUpperCase()}</span>
             <span>·</span>
