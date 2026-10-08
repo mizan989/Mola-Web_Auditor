@@ -83,13 +83,12 @@ export function FindingItem({ finding, isExpanded, onToggleExpand }: FindingItem
           </p>
         </div>
 
-        <button
-          type="button"
-          className="p-1.5 rounded-lg hover:bg-white/60 text-[var(--muted)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--deep)]"
-          aria-label={isExpanded ? `Collapse details for ${finding.title}` : `Expand details for ${finding.title}`}
+        <span
+          aria-hidden="true"
+          className="p-1.5 rounded-lg text-[var(--muted)] shrink-0"
         >
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-        </button>
+        </span>
       </div>
 
       {/* Expandable Details Container (ISSUE-046 order) */}

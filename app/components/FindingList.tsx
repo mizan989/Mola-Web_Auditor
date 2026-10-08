@@ -66,13 +66,10 @@ export function FindingList({
             <Server className="w-4 h-4 text-[var(--dark)]" />
             <span>HTTP & Infrastructure Telemetry</span>
           </div>
-          <button
-            type="button"
-            className="text-xs font-bold text-[var(--muted)] hover:text-[var(--text-primary)] flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-[var(--deep)] rounded"
-          >
+          <span className="text-xs font-bold text-[var(--muted)] hover:text-[var(--text-primary)] flex items-center gap-1 rounded">
             <span>{showHeaders ? "Hide Headers" : "Inspect Raw Headers"}</span>
             {showHeaders ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+          </span>
         </div>
 
         {showHeaders && (
@@ -108,13 +105,10 @@ export function FindingList({
             <CheckCircle2 className="w-4 h-4" />
             <span>Verified Passing Baseline Checks ({passedChecks.length})</span>
           </div>
-          <button
-            type="button"
-            className="text-xs font-bold text-[var(--muted)] hover:text-[var(--text-primary)] flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-[var(--deep)] rounded"
-          >
+          <span className="text-xs font-bold text-[var(--muted)] hover:text-[var(--text-primary)] flex items-center gap-1 rounded">
             <span>{showPassed ? "Collapse" : "View Passing Checks"}</span>
             {showPassed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+          </span>
         </div>
 
         {showPassed && (

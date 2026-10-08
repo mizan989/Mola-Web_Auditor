@@ -1,20 +1,20 @@
 import crypto from "node:crypto";
-import {
+import type {
   Finding,
   FindingCategory,
   FindingPriority,
   PassedCheck,
   ScanResult,
-} from "@/types/audit";
-import { validateUrlAsync } from "./validators/url";
-import { performHttpInspection } from "./scanners/http";
-import { auditSecurity } from "./scanners/security";
-import { auditPerformance } from "./scanners/performance";
-import { auditSeo } from "./scanners/seo";
-import { auditAccessibility } from "./scanners/a11y";
-import { detectTechnologies } from "./scanners/tech";
-import { auditBestPractices } from "./scanners/bestPractices";
-import { auditDeepScan } from "./scanners/deep";
+} from "../types/audit.ts";
+import { validateUrlAsync } from "./validators/url.ts";
+import { performHttpInspection } from "./scanners/http.ts";
+import { auditSecurity } from "./scanners/security.ts";
+import { auditPerformance } from "./scanners/performance.ts";
+import { auditSeo } from "./scanners/seo.ts";
+import { auditAccessibility } from "./scanners/a11y.ts";
+import { detectTechnologies } from "./scanners/tech.ts";
+import { auditBestPractices } from "./scanners/bestPractices.ts";
+import { auditDeepScan } from "./scanners/deep.ts";
 
 export interface ScanOptions {
   url: string;
@@ -168,4 +168,4 @@ export async function runWebsiteAudit(options: ScanOptions): Promise<ScanResult>
   };
 }
 
-export { compareAuditResults } from "@/lib/compare";
+export { compareAuditResults } from "../lib/compare.ts";
